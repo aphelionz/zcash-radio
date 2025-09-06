@@ -64,7 +64,7 @@ async fn main() -> Result<()> {
         .user_agent("zcash-radio/0.1 (+https://github.com/you)")
         .build()?;
 
-    let mut posts = if !args.chunked {
+    let posts = if !args.chunked {
         fetch_topic_print(&client, &args.topic_url).await?
     } else {
         fetch_topic_chunked(&client, &args.topic_url).await?
@@ -81,7 +81,7 @@ async fn main() -> Result<()> {
         BTreeMap::new()
     };
 
-    for p in posts.drain(..) {
+    for p in posts {
         let doc = Html::parse_fragment(&p.cooked);
         for a in doc.select(&a_sel) {
             if let Some(href) = a.value().attr("href") {
