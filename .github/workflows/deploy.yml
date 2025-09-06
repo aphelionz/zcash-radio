@@ -27,9 +27,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Generate videos.json
         run: |
-          cargo run --release --manifest-path zcash-radio-scan/Cargo.toml -- \
-            --topic-url https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456 \
-            --out public/videos.json
+          cargo run --release # use default arguments
 
       # Prepare and upload the static site
       - name: Setup Pages
