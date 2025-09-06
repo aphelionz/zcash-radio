@@ -9,7 +9,7 @@ They handle two roles: **Scanner Agent** and **Deployment Agent**.
 
 **Purpose:** Periodically scan the Zcash Community Forum “What are you listening to?” thread and produce an up-to-date `videos.json`.
 
-- **Codebase:** [`zcash-radio-scan/`](./zcash-radio-scan)
+ - **Codebase:** [Rust scanner crate at repo root](./)
 - **Language:** Rust
 - **Entry point:** `src/main.rs`
 - **Behavior:**
