@@ -115,7 +115,15 @@
           else if (e.data === YT.PlayerState.PLAYING) console.log("Playing");
           else if (e.data === YT.PlayerState.PAUSED) console.log("Paused");
         },
-        onError: () => { console.log("Error • skipping"); next(); }
+        onError: e => {
+          const id = current();
+          if (e.data === 100 && id) {
+            console.log("404 " + id);
+          } else {
+            console.log("Error (" + e.data + ") • skipping" + (id ? " " + id : ""));
+          }
+          next();
+        }
       }
     });
   };
