@@ -18,7 +18,7 @@ struct Args {
     topic_url: String,
 
     /// Output JSON file (will be created/updated)
-    #[arg(long, default_value = "videos.json")]
+    #[arg(long, default_value = "./public/videos.json")]
     out: PathBuf,
 
     /// Use chunked fetching via post_ids (safety valve if print=true ever fails)
