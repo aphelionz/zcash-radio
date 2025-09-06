@@ -10,8 +10,9 @@
   #player{position:relative}
   #yt{position:absolute;inset:0;width:100%;height:100%}
   footer{padding:.5rem .75rem;font-size:.9rem;color:#9fb0c6;background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0))}
+  footer button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
   code{font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(255,255,255,.08);border-radius:999px;padding:.2rem .5rem;color:#e8eef5}
-</style>
+  </style>
 </head>
 <body>
 <div id="wrap">
@@ -20,7 +21,7 @@
   </div>
   <footer>
     <a id="share" href="#">Share</a>
-    <code>u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x</code>
+    <button id="ua-btn"><code id="ua"></code></button>
   </footer>
 </div>
 
@@ -28,6 +29,13 @@
 <script>
   // --- config ---------------------------------------------------------------
   const LIST_URL = "./videos.json"; // same folder as this file
+  const DEFAULT_UA = "u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x";
+  const params = new URLSearchParams(location.search);
+  const fullUA = params.get("ua") || params.get("addr") || DEFAULT_UA;
+  const shorten = s => s.length > 16 ? `${s.slice(0,8)}…${s.slice(-8)}` : s;
+  const $uaBtn = document.getElementById("ua-btn");
+  $uaBtn.querySelector("code").textContent = shorten(fullUA);
+  $uaBtn.addEventListener("click", () => navigator.clipboard.writeText(fullUA));
 
   // --- state ----------------------------------------------------------------
   let YTPlayer = null;
