@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Zcash Radio</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  html,body{height:100%;margin:0;background:#0b0e13;color:#e8eef5;font:16px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  #wrap{position:fixed;inset:0;display:grid;grid-template-rows:1fr auto}
+  #player{position:relative}
+  #yt{position:absolute;inset:0;width:100%;height:100%}
+  #gate{position:absolute;inset:0;display:grid;place-items:center;background:#0b0e13}
+  #gate button{padding:.7rem 1rem;font-weight:700}
+  footer{padding:.5rem .75rem;font-size:.9rem;color:#9fb0c6;background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0))}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(255,255,255,.08);border-radius:999px;padding:.2rem .5rem;color:#e8eef5}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="player">
+    <div id="yt"></div>
+    <div id="gate"><button id="start">Start Radio</button></div>
+  </div>
+  <footer>
+    <span id="status">Idle</span> · “Pennies from Heaven” <code id="addr"></code>
+  </footer>
+</div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+  // --- config ---------------------------------------------------------------
+  const LIST_URL = "./videos.json"; // same folder as this file
+  const DEFAULT_ADDR = "t1ZCASHpenniesFromHeavenExampleAddr123";
+  const addr = new URLSearchParams(location.search).get("addr") || DEFAULT_ADDR;
+  document.getElementById("addr").textContent = addr;
+
+  // --- state ----------------------------------------------------------------
+  let YTPlayer = null;
+  let ids = [];
+  let order = [];
+  let i = 0;
+
+  // Promise that resolves when the YouTube player is ready
+  let resolveReady;
+  const playerReady = new Promise(res => resolveReady = res);
+
+  const $status = document.getElementById("status");
+  const setStatus = s => ($status.textContent = s);
+
+  // --- utils ----------------------------------------------------------------
+  const shuffle = a => { for (let j=a.length-1;j>0;j--){const k=(Math.random()*(j+1))|0; [a[j],a[k]]=[a[k],a[j]];} return a; };
+  const current = () => order.length ? ids[order[i]] : null;
+  const next = () => { if(!order.length) return; i = (i+1)%order.length; play(); };
+  const prev = () => { if(!order.length) return; i = (i-1+order.length)%order.length; play(); };
+
+  async function loadIds() {
+    const r = await fetch(LIST_URL, { cache: "no-store" });
+    if (!r.ok) throw new Error(`Failed to load ${LIST_URL} (${r.status})`);
+    const j = await r.json();
+    const re = /^[A-Za-z0-9_-]{11}$/;
+    ids = Array.isArray(j) ? j.map(v => typeof v === "string" ? v : v.video_id)
+                           : Object.keys(j);
+    ids = ids.filter(v => re.test(v));
+    if (!ids.length) throw new Error("No valid video IDs in videos.json");
+    order = shuffle([...ids.keys()]);
+    i = 0;
+  }
+
+  function play() {
+    const id = current();
+    if (!id) return;
+    setStatus("Playing " + id);
+    // Will auto-start because the click already happened
+    YTPlayer.loadVideoById({ videoId: id, suggestedQuality: "large" });
+  }
+
+  // YouTube API hook
+  window.onYouTubeIframeAPIReady = () => {
+    YTPlayer = new YT.Player("yt", {
+      width:"100%", height:"100%",
+      playerVars:{autoplay:0,controls:0,modestbranding:1,rel:0,playsinline:1,iv_load_policy:3,disablekb:1},
+      events:{
+        onReady: () => { setStatus("Ready"); resolveReady(); },
+        onStateChange: e => {
+          if (e.data === YT.PlayerState.ENDED) next();
+          else if (e.data === YT.PlayerState.PLAYING) setStatus("Playing");
+          else if (e.data === YT.PlayerState.PAUSED) setStatus("Paused");
+        },
+        onError: () => { setStatus("Error • skipping"); next(); }
+      }
+    });
+  };
+
+  // Start gate
+  document.getElementById("start").addEventListener("click", async () => {
+    document.getElementById("gate").style.display = "none";
+    try {
+      // Wait for both: list + player ready (prevents “big play button” stall)
+      await Promise.all([loadIds(), playerReady]);
+      YTPlayer.unMute?.();
+      play();
+    } catch (e) {
+      setStatus(String(e));
+    }
+  });
+
+  // Keyboard: space = play/pause, arrows = prev/next
+  addEventListener("keydown", e => {
+    if (!YTPlayer) return;
+    if (e.code === "Space") {
+      e.preventDefault();
+      const s = YTPlayer.getPlayerState?.();
+      (s === YT.PlayerState.PLAYING ? YTPlayer.pauseVideo() : YTPlayer.playVideo());
+    } else if (e.code === "ArrowRight") { e.preventDefault(); next(); }
+    else if (e.code === "ArrowLeft") { e.preventDefault(); prev(); }
+  });
+
+  // Optional: reload list hourly if Actions updates it
+  setInterval(() => { loadIds().catch(()=>{}); }, 3600_000);
+</script>
+</body>
+</html>
+
