@@ -3,7 +3,11 @@ use clap::Parser;
 use regex::Regex;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, fs, path::PathBuf};
+use std::{
+    collections::{BTreeMap, HashMap},
+    fs,
+    path::PathBuf,
+};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use url::Url;
 
@@ -74,11 +78,11 @@ async fn main() -> Result<()> {
     let a_sel = Selector::parse("a").unwrap();
     let id_pat = Regex::new(r"^[A-Za-z0-9_-]{11}$").unwrap();
 
-    let mut map: BTreeMap<String, VideoEntry> = if args.out.exists() {
+    let mut map: HashMap<String, VideoEntry> = if args.out.exists() {
         let data = fs::read_to_string(&args.out)?;
         serde_json::from_str(&data).unwrap_or_default()
     } else {
-        BTreeMap::new()
+        HashMap::new()
     };
 
     for p in posts {
@@ -159,14 +163,12 @@ async fn main() -> Result<()> {
     }
 
     // Persist deterministically (sorted by key)
-    let json = serde_json::to_string_pretty(&map)?;
+    let len = map.len();
+    let ordered: BTreeMap<_, _> = map.into_iter().collect();
+    let json = serde_json::to_string_pretty(&ordered)?;
     fs::write(&args.out, json)?;
 
-    eprintln!(
-        "Upserted {} unique videos into {}",
-        map.len(),
-        args.out.display()
-    );
+    eprintln!("Upserted {} unique videos into {}", len, args.out.display());
     Ok(())
 }
 
