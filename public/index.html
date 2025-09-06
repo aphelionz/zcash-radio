@@ -22,7 +22,7 @@
     <div id="gate"><button id="start">Start Radio</button></div>
   </div>
   <footer>
-    <span id="status">Idle</span> · “Pennies from Heaven” <code id="addr"></code>
+    <span id="status">Idle</span> · “Pennies from Heaven” <code>t1ZCASHpenniesFromHeavenExampleAddr123</code>
   </footer>
 </div>
 
@@ -30,9 +30,6 @@
 <script>
   // --- config ---------------------------------------------------------------
   const LIST_URL = "./videos.json"; // same folder as this file
-  const DEFAULT_ADDR = "t1ZCASHpenniesFromHeavenExampleAddr123";
-  const addr = new URLSearchParams(location.search).get("addr") || DEFAULT_ADDR;
-  document.getElementById("addr").textContent = addr;
 
   // --- state ----------------------------------------------------------------
   let YTPlayer = null;

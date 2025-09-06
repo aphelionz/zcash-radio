@@ -55,9 +55,9 @@ python3 -m http.server 8080
 
 Visit http://localhost:8080 and click Start Radio.
 
-### Donation address override
+### Donation address
 
-Append ?addr=zs1... to the URL to show a different donation address in the footer.
+The footer displays a fixed donation address defined directly in `public/index.html`.
 
 ### Maintainers
 
