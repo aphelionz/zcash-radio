@@ -172,28 +172,29 @@ async fn main() -> Result<()> {
 
 async fn fetch_topic_print(client: &reqwest::Client, topic_url: &str) -> Result<Vec<Post>> {
     let url = format!("{}.json?print=true", topic_url.trim_end_matches('/'));
-    let topic: Topic = client
-        .get(&url)
-        .send()
-        .await?
-        .error_for_status()
-        .with_context(|| format!("GET {}", url))?
-        .json()
-        .await?;
+    let resp = client.get(&url).send().await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        eprintln!("DISCOURSE ERROR {} -> {}\n{}", url, status, body);
+        anyhow::bail!("GET {}", url);
+    }
+    let topic: Topic = resp.json().await?;
     Ok(topic.post_stream.posts)
 }
 
 // Safety valve: fetch first page, then chunk via /t/{id}/posts.json?post_ids[]=...
 async fn fetch_topic_chunked(client: &reqwest::Client, topic_url: &str) -> Result<Vec<Post>> {
     let base = format!("{}.json", topic_url.trim_end_matches('/'));
-    let t: Topic = client
-        .get(&base)
-        .send()
-        .await?
-        .error_for_status()
-        .with_context(|| format!("GET {}", base))?
-        .json()
-        .await?;
+    let resp = client.get(&base).send().await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        eprintln!("DISCOURSE ERROR {} -> {}\n{}", base, status, body);
+        anyhow::bail!("GET {}", base);
+    }
+
+    let t: Topic = resp.json().await?;
 
     let mut posts = t.post_stream.posts;
     let mut ids = t.post_stream.stream;
@@ -210,14 +211,17 @@ async fn fetch_topic_chunked(client: &reqwest::Client, topic_url: &str) -> Resul
         for id in chunk {
             url.push_str(&format!("post_ids[]={}&", id));
         }
-        let got: serde_json::Value = client
-            .get(&url)
-            .send()
-            .await?
-            .error_for_status()
-            .with_context(|| format!("GET {}", url))?
-            .json()
-            .await?;
+
+        let resp = client.get(&url).send().await?;
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            eprintln!("DISCOURSE ERROR {} -> {}\n{}", url, status, body);
+            // Skip this chunk but continue
+            continue;
+        }
+
+        let got: serde_json::Value = resp.json().await?;
 
         if let Some(arr) = got
             .get("post_stream")
