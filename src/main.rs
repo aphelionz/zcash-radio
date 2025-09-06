@@ -3,11 +3,7 @@ use clap::Parser;
 use regex::Regex;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{BTreeMap, HashMap},
-    fs,
-    path::PathBuf,
-};
+use std::{collections::HashMap, fs, path::PathBuf};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use url::Url;
 
@@ -75,11 +71,17 @@ async fn main() -> Result<()> {
     let a_sel = Selector::parse("a").unwrap();
     let id_pat = Regex::new(r"^[A-Za-z0-9_-]{11}$").unwrap();
 
+    let posts = if !args.chunked {
+        get_topic_print(&client, topic_url).await?
+    } else {
+        get_topic_chunked(&client, topic_url).await?
+    };
+
     let mut map: HashMap<String, VideoEntry> = if args.out.exists() {
         let data = fs::read_to_string(&args.out)?;
         serde_json::from_str(&data).unwrap_or_default()
     } else {
-        HashMap::new()
+        HashMap::with_capacity(posts.len())
     };
 
     let mut process = |p: Post| {
@@ -160,26 +162,19 @@ async fn main() -> Result<()> {
         }
     };
 
-    if !args.chunked {
-        fetch_topic_print(&client, topic_url, &mut process).await?;
-    } else {
-        fetch_topic_chunked(&client, topic_url, &mut process).await?;
+    for post in posts {
+        process(post);
     }
 
-    // Persist deterministically (sorted by key)
     let len = map.len();
-    let ordered: BTreeMap<_, _> = map.into_iter().collect();
-    let json = serde_json::to_string_pretty(&ordered)?;
+    let json = serde_json::to_string_pretty(&map)?;
     fs::write(&args.out, json)?;
 
     eprintln!("Upserted {} unique videos into {}", len, args.out.display());
     Ok(())
 }
 
-async fn fetch_topic_print<F>(client: &reqwest::Client, topic_url: &str, mut f: F) -> Result<()>
-where
-    F: FnMut(Post),
-{
+async fn get_topic_print(client: &reqwest::Client, topic_url: &str) -> Result<Vec<Post>> {
     let url = format!("{}.json?print=true", topic_url.trim_end_matches('/'));
     let resp = client.get(&url).send().await?;
     if !resp.status().is_success() {
@@ -189,17 +184,11 @@ where
         anyhow::bail!("GET {}", url);
     }
     let topic: Topic = resp.json().await?;
-    for post in topic.post_stream.posts {
-        f(post);
-    }
-    Ok(())
+    Ok(topic.post_stream.posts)
 }
 
 // Safety valve: fetch first page, then chunk via /t/{id}/posts.json?post_ids[]=...
-async fn fetch_topic_chunked<F>(client: &reqwest::Client, topic_url: &str, mut f: F) -> Result<()>
-where
-    F: FnMut(Post),
-{
+async fn get_topic_chunked(client: &reqwest::Client, topic_url: &str) -> Result<Vec<Post>> {
     let base_url = topic_url.trim_end_matches('/');
     let base = format!("{}.json", base_url);
     let resp = client.get(&base).send().await?;
@@ -212,17 +201,12 @@ where
 
     let t: Topic = resp.json().await?;
 
-    for post in t.post_stream.posts {
-        f(post);
-    }
+    let mut posts = t.post_stream.posts;
     let stream = t.post_stream.stream;
     let ids = stream.get(20..).unwrap_or(&[]);
 
     for chunk in ids.chunks(20) {
-        let post_ids: Vec<String> = chunk
-            .iter()
-            .map(|id| format!("post_ids[]={}", id))
-            .collect();
+        let post_ids: Vec<String> = chunk.iter().map(|id| format!("post_ids={}", id)).collect();
         let url = format!("{}/posts.json?{}", base_url, post_ids.join("&"));
 
         let resp = client.get(&url).send().await?;
@@ -242,11 +226,9 @@ where
                 continue;
             }
         };
-        for post in topic.post_stream.posts {
-            f(post);
-        }
+        posts.extend(topic.post_stream.posts);
 
         tokio::time::sleep(std::time::Duration::from_millis(400)).await;
     }
-    Ok(())
+    Ok(posts)
 }
