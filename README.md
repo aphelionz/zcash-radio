@@ -21,7 +21,7 @@
 
 The Zcash community has a long-running thread — [*What are you listening to?*](https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456) — where members share music.  
 
-Zcash Radio collects those YouTube links, shuffles them, and streams them in a minimalist fullscreen web player with a “Pennies from Heaven” donation address.
+Zcash Radio collects those YouTube links, shuffles them, and streams them in a minimalist fullscreen web player with a discreetly-displayed donation address.
 
 The playlist updates automatically every 6 hours via GitHub Actions.
 
