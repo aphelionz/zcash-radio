@@ -9,8 +9,16 @@
   #wrap{position:fixed;inset:0;display:grid;grid-template-rows:1fr auto}
   #player{position:relative}
   #yt{position:absolute;inset:0;width:100%;height:100%}
-  footer{padding:.5rem .75rem;font-size:.9rem;color:#9fb0c6;background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0))}
-  code{font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(255,255,255,.08);border-radius:999px;padding:.2rem .5rem;color:#e8eef5}
+  footer{padding:.5rem .75rem;font-size:.9rem;color:#9fb0c6;background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0));display:flex;flex-direction:column;align-items:center;gap:.5rem}
+  .f-left,.f-center,.f-right{width:100%;text-align:center}
+  @media(min-width:600px){
+    footer{flex-direction:row}
+    .f-left,.f-center,.f-right{width:auto;flex:1}
+    .f-left{text-align:left}
+    .f-center{text-align:center}
+    .f-right{text-align:right}
+  }
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(255,255,255,.08);border-radius:999px;padding:.2rem .5rem;color:#e8eef5;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -19,8 +27,9 @@
     <div id="yt"></div>
   </div>
   <footer>
-    <a id="share" href="#">Share</a>
-    <code>u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x</code>
+    <div class="f-left"><span id="status"></span></div>
+    <div class="f-center"><a id="share" href="#">Share</a></div>
+    <div class="f-right"><code>u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x</code></div>
   </footer>
 </div>
 
