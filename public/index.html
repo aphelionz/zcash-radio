@@ -22,7 +22,7 @@
     <div id="gate"><button id="start">Start Radio</button></div>
   </div>
   <footer>
-    <span id="status">Idle</span> <code>u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x</code>
+    <code>u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x</code>
   </footer>
 </div>
 
@@ -41,8 +41,6 @@
   let resolveReady;
   const playerReady = new Promise(res => resolveReady = res);
 
-  const $status = document.getElementById("status");
-  const setStatus = s => ($status.textContent = s);
 
   // --- utils ----------------------------------------------------------------
   const shuffle = a => { for (let j=a.length-1;j>0;j--){const k=(Math.random()*(j+1))|0; [a[j],a[k]]=[a[k],a[j]];} return a; };
@@ -66,7 +64,7 @@
   function play() {
     const id = current();
     if (!id) return;
-    setStatus("Playing " + id);
+    console.log("Playing " + id);
     // Will auto-start because the click already happened
     YTPlayer.loadVideoById({ videoId: id, suggestedQuality: "large" });
   }
@@ -77,13 +75,13 @@
       width:"100%", height:"100%",
       playerVars:{autoplay:0,controls:0,modestbranding:1,rel:0,playsinline:1,iv_load_policy:3,disablekb:1},
       events:{
-        onReady: () => { setStatus("Ready"); resolveReady(); },
+        onReady: () => { console.log("Ready"); resolveReady(); },
         onStateChange: e => {
           if (e.data === YT.PlayerState.ENDED) next();
-          else if (e.data === YT.PlayerState.PLAYING) setStatus("Playing");
-          else if (e.data === YT.PlayerState.PAUSED) setStatus("Paused");
+          else if (e.data === YT.PlayerState.PLAYING) console.log("Playing");
+          else if (e.data === YT.PlayerState.PAUSED) console.log("Paused");
         },
-        onError: () => { setStatus("Error • skipping"); next(); }
+        onError: () => { console.log("Error • skipping"); next(); }
       }
     });
   };
@@ -97,7 +95,7 @@
       YTPlayer.unMute?.();
       play();
     } catch (e) {
-      setStatus(String(e));
+      console.log(String(e));
     }
   });
 
