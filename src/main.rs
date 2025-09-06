@@ -225,23 +225,15 @@ async fn fetch_topic_chunked(client: &reqwest::Client, topic_url: &str) -> Resul
             continue;
         }
 
-        let got: serde_json::Value = resp.json().await?;
-
-        if let Some(arr) = got
-            .get("post_stream")
-            .and_then(|ps| ps.get("posts"))
-            .and_then(|p| p.as_array())
-        {
-            posts.extend(
-                arr.iter()
-                    .filter_map(|v| serde_json::from_value(v.clone()).ok()),
-            );
-        } else if let Some(arr) = got.get("posts").and_then(|p| p.as_array()) {
-            posts.extend(
-                arr.iter()
-                    .filter_map(|v| serde_json::from_value(v.clone()).ok()),
-            );
-        }
+        let topic = match resp.json::<Topic>().await {
+            Ok(topic) => topic,
+            Err(err) => {
+                eprintln!("PARSE ERROR {} -> {}", url, err);
+                // Skip this chunk on parse error
+                continue;
+            }
+        };
+        posts.extend(topic.post_stream.posts);
 
         tokio::time::sleep(std::time::Duration::from_millis(400)).await;
     }
