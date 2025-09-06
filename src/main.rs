@@ -47,8 +47,6 @@ struct Post {
     id: i64,
     post_number: i64,
     cooked: String,
-    #[serde(default)]
-    created_at: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
