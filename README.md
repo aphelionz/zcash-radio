@@ -34,13 +34,16 @@ Clone the repo:
 ```sh
 git clone https://github.com/aphelionz/zcash-radio.git
 cd zcash-radio
+```
 
 Build the Rust scanner (requires Rust stable):
 
-cargo run --release --manifest-path zcash-radio-scan/Cargo.toml
+```sh
+cargo run --release
 ```
 
-This produces public/videos.json.
+This produces `public/videos.json`.
+Use `--topic-url`, `--out`, or `--chunked` to customize the scan.
 
 ## Usage
 
