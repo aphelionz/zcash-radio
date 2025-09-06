@@ -200,14 +200,8 @@ async fn fetch_topic_chunked(client: &reqwest::Client, topic_url: &str) -> Resul
     let t: Topic = resp.json().await?;
 
     let mut posts = t.post_stream.posts;
-    let mut ids = t.post_stream.stream;
-
-    // Drop first 20 (already included)
-    if ids.len() >= 20 {
-        ids.drain(0..20);
-    } else {
-        ids.clear();
-    }
+    let stream = t.post_stream.stream;
+    let ids = stream.get(20..).unwrap_or(&[]);
 
     for chunk in ids.chunks(20) {
         let post_ids: Vec<String> = chunk
