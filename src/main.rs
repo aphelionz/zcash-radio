@@ -187,7 +187,8 @@ async fn fetch_topic_print(client: &reqwest::Client, topic_url: &str) -> Result<
 
 // Safety valve: fetch first page, then chunk via /t/{id}/posts.json?post_ids[]=...
 async fn fetch_topic_chunked(client: &reqwest::Client, topic_url: &str) -> Result<Vec<Post>> {
-    let base = format!("{}.json", topic_url.trim_end_matches('/'));
+    let base_url = topic_url.trim_end_matches('/');
+    let base = format!("{}.json", base_url);
     let resp = client.get(&base).send().await?;
     if !resp.status().is_success() {
         let status = resp.status();
@@ -209,10 +210,11 @@ async fn fetch_topic_chunked(client: &reqwest::Client, topic_url: &str) -> Resul
     }
 
     for chunk in ids.chunks(20) {
-        let mut url = format!("{}/posts.json?", topic_url.trim_end_matches('/'));
-        for id in chunk {
-            url.push_str(&format!("post_ids[]={}&", id));
-        }
+        let post_ids: Vec<String> = chunk
+            .iter()
+            .map(|id| format!("post_ids[]={}", id))
+            .collect();
+        let url = format!("{}/posts.json?{}", base_url, post_ids.join("&"));
 
         let resp = client.get(&url).send().await?;
         if !resp.status().is_success() {
