@@ -62,14 +62,15 @@ struct VideoEntry {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
+    let topic_url = args.topic_url.trim_end_matches('/');
     let client = reqwest::Client::builder()
         .user_agent("zcash-radio/0.1 (+https://github.com/you)")
         .build()?;
 
     let posts = if !args.chunked {
-        fetch_topic_print(&client, &args.topic_url).await?
+        fetch_topic_print(&client, topic_url).await?
     } else {
-        fetch_topic_chunked(&client, &args.topic_url).await?
+        fetch_topic_chunked(&client, topic_url).await?
     };
 
     // Extract and canonicalize YouTube IDs
@@ -151,7 +152,7 @@ async fn main() -> Result<()> {
                         canonical_url: canonical.clone(),
                         first_seen_post: p.id,
                         first_seen_post_number: p.post_number,
-                        source_post_url: format!("{}/{}", args.topic_url, p.post_number),
+                        source_post_url: format!("{}/{}", topic_url, p.post_number),
                         last_seen_at: now.clone(),
                     });
                     entry.last_seen_at = now;
