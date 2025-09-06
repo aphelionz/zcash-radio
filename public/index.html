@@ -9,8 +9,6 @@
   #wrap{position:fixed;inset:0;display:grid;grid-template-rows:1fr auto}
   #player{position:relative}
   #yt{position:absolute;inset:0;width:100%;height:100%}
-  #gate{position:absolute;inset:0;display:grid;place-items:center;background:#0b0e13}
-  #gate button{padding:.7rem 1rem;font-weight:700}
   footer{padding:.5rem .75rem;font-size:.9rem;color:#9fb0c6;background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0))}
   code{font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(255,255,255,.08);border-radius:999px;padding:.2rem .5rem;color:#e8eef5}
 </style>
@@ -19,7 +17,6 @@
 <div id="wrap">
   <div id="player">
     <div id="yt"></div>
-    <div id="gate"><button id="start">Start Radio</button></div>
   </div>
   <footer>
     <code>u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x</code>
@@ -65,7 +62,6 @@
     const id = current();
     if (!id) return;
     console.log("Playing " + id);
-    // Will auto-start because the click already happened
     YTPlayer.loadVideoById({ videoId: id, suggestedQuality: "large" });
   }
 
@@ -73,7 +69,7 @@
   window.onYouTubeIframeAPIReady = () => {
     YTPlayer = new YT.Player("yt", {
       width:"100%", height:"100%",
-      playerVars:{autoplay:0,controls:0,modestbranding:1,rel:0,playsinline:1,iv_load_policy:3,disablekb:1},
+      playerVars:{autoplay:1,controls:0,modestbranding:1,rel:0,playsinline:1,iv_load_policy:3,disablekb:1},
       events:{
         onReady: () => { console.log("Ready"); resolveReady(); },
         onStateChange: e => {
@@ -86,18 +82,16 @@
     });
   };
 
-  // Start gate
-  document.getElementById("start").addEventListener("click", async () => {
-    document.getElementById("gate").style.display = "none";
+  // Autoplay first video when ready
+  (async () => {
     try {
-      // Wait for both: list + player ready (prevents “big play button” stall)
       await Promise.all([loadIds(), playerReady]);
       YTPlayer.unMute?.();
       play();
     } catch (e) {
       console.log(String(e));
     }
-  });
+  })();
 
   // Keyboard: space = play/pause, arrows = prev/next
   addEventListener("keydown", e => {
