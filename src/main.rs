@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Parser;
 use regex::Regex;
 use scraper::{Html, Selector};
@@ -67,12 +67,6 @@ async fn main() -> Result<()> {
         .user_agent("zcash-radio/0.1 (+https://github.com/you)")
         .build()?;
 
-    let posts = if !args.chunked {
-        fetch_topic_print(&client, topic_url).await?
-    } else {
-        fetch_topic_chunked(&client, topic_url).await?
-    };
-
     // Extract and canonicalize YouTube IDs
     let a_sel = Selector::parse("a").unwrap();
     let id_pat = Regex::new(r"^[A-Za-z0-9_-]{11}$").unwrap();
@@ -84,7 +78,7 @@ async fn main() -> Result<()> {
         HashMap::new()
     };
 
-    for p in posts {
+    let mut process = |p: Post| {
         let doc = Html::parse_fragment(&p.cooked);
         for a in doc.select(&a_sel) {
             if let Some(href) = a.value().attr("href") {
@@ -159,6 +153,12 @@ async fn main() -> Result<()> {
                 }
             }
         }
+    };
+
+    if !args.chunked {
+        fetch_topic_print(&client, topic_url, &mut process).await?;
+    } else {
+        fetch_topic_chunked(&client, topic_url, &mut process).await?;
     }
 
     // Persist deterministically (sorted by key)
@@ -171,7 +171,10 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn fetch_topic_print(client: &reqwest::Client, topic_url: &str) -> Result<Vec<Post>> {
+async fn fetch_topic_print<F>(client: &reqwest::Client, topic_url: &str, mut f: F) -> Result<()>
+where
+    F: FnMut(Post),
+{
     let url = format!("{}.json?print=true", topic_url.trim_end_matches('/'));
     let resp = client.get(&url).send().await?;
     if !resp.status().is_success() {
@@ -181,11 +184,17 @@ async fn fetch_topic_print(client: &reqwest::Client, topic_url: &str) -> Result<
         anyhow::bail!("GET {}", url);
     }
     let topic: Topic = resp.json().await?;
-    Ok(topic.post_stream.posts)
+    for post in topic.post_stream.posts {
+        f(post);
+    }
+    Ok(())
 }
 
 // Safety valve: fetch first page, then chunk via /t/{id}/posts.json?post_ids[]=...
-async fn fetch_topic_chunked(client: &reqwest::Client, topic_url: &str) -> Result<Vec<Post>> {
+async fn fetch_topic_chunked<F>(client: &reqwest::Client, topic_url: &str, mut f: F) -> Result<()>
+where
+    F: FnMut(Post),
+{
     let base_url = topic_url.trim_end_matches('/');
     let base = format!("{}.json", base_url);
     let resp = client.get(&base).send().await?;
@@ -198,7 +207,9 @@ async fn fetch_topic_chunked(client: &reqwest::Client, topic_url: &str) -> Resul
 
     let t: Topic = resp.json().await?;
 
-    let mut posts = t.post_stream.posts;
+    for post in t.post_stream.posts {
+        f(post);
+    }
     let stream = t.post_stream.stream;
     let ids = stream.get(20..).unwrap_or(&[]);
 
@@ -226,9 +237,11 @@ async fn fetch_topic_chunked(client: &reqwest::Client, topic_url: &str) -> Resul
                 continue;
             }
         };
-        posts.extend(topic.post_stream.posts);
+        for post in topic.post_stream.posts {
+            f(post);
+        }
 
         tokio::time::sleep(std::time::Duration::from_millis(400)).await;
     }
-    Ok(posts)
+    Ok(())
 }
