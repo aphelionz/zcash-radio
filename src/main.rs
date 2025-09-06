@@ -47,6 +47,8 @@ struct Post {
     id: i64,
     post_number: i64,
     cooked: String,
+    #[serde(default)]
+    username: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -56,6 +58,8 @@ struct VideoEntry {
     first_seen_post: i64,
     first_seen_post_number: i64,
     source_post_url: String,
+    #[serde(default)]
+    username: String,
     last_seen_at: String,
 }
 
@@ -147,6 +151,7 @@ async fn main() -> Result<()> {
                         first_seen_post: p.id,
                         first_seen_post_number: p.post_number,
                         source_post_url: format!("{}/{}", topic_url, p.post_number),
+                        username: p.username.clone(),
                         last_seen_at: now.clone(),
                     });
                     entry.last_seen_at = now;
