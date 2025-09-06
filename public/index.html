@@ -9,8 +9,11 @@
   #wrap{position:fixed;inset:0;display:grid;grid-template-rows:1fr auto}
   #player{position:relative}
   #yt{position:absolute;inset:0;width:100%;height:100%}
-  footer{padding:.5rem .75rem;font-size:.9rem;color:#9fb0c6;background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0))}
+  footer{padding:.5rem .75rem;font-size:.9rem;color:#9fb0c6;background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0));display:flex;flex-direction:column;align-items:center;gap:.5rem}
+  footer .f-left,footer .f-center,footer .f-right{text-align:center}
+  footer .f-center{display:flex;gap:1rem;justify-content:center}
   footer button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
+  @media(min-width:600px){footer{flex-direction:row;justify-content:space-between}footer .f-left,footer .f-center,footer .f-right{flex:1}footer .f-left{text-align:left}footer .f-right{text-align:right}}
   code{font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(255,255,255,.08);border-radius:999px;padding:.2rem .5rem;color:#e8eef5}
   </style>
 </head>
@@ -20,8 +23,13 @@
     <div id="yt"></div>
   </div>
   <footer>
-    <a id="share" href="#">Share</a>
-    <button id="ua-btn"><code id="ua"></code></button>
+    <div class="f-left"><span id="status"></span></div>
+    <div class="f-center">
+      <a id="share" href="#">Share</a>
+    </div>
+    <div class="f-right">
+      <button id="ua-btn"><code id="ua"></code></button>
+    </div>
   </footer>
 </div>
 
