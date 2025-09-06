@@ -19,6 +19,7 @@
     <div id="yt"></div>
   </div>
   <footer>
+    <a id="share" href="#">Share</a>
     <code>u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x</code>
   </footer>
 </div>
@@ -33,6 +34,7 @@
   let ids = [];
   let order = [];
   let i = 0;
+  const re = /^[A-Za-z0-9_-]{11}$/;
 
   // Promise that resolves when the YouTube player is ready
   let resolveReady;
@@ -49,19 +51,21 @@
     const r = await fetch(LIST_URL, { cache: "no-store" });
     if (!r.ok) throw new Error(`Failed to load ${LIST_URL} (${r.status})`);
     const j = await r.json();
-    const re = /^[A-Za-z0-9_-]{11}$/;
     ids = Array.isArray(j) ? j.map(v => typeof v === "string" ? v : v.video_id)
                            : Object.keys(j);
     ids = ids.filter(v => re.test(v));
     if (!ids.length) throw new Error("No valid video IDs in videos.json");
+    const hash = location.hash.slice(1);
+    const idx = ids.indexOf(hash);
     order = shuffle([...ids.keys()]);
-    i = 0;
+    i = idx >= 0 ? order.indexOf(idx) : 0;
   }
 
   function play() {
     const id = current();
     if (!id) return;
     console.log("Playing " + id);
+    location.hash = id;
     YTPlayer.loadVideoById({ videoId: id, suggestedQuality: "large" });
   }
 
@@ -92,6 +96,14 @@
       console.log(String(e));
     }
   })();
+
+  const share = () => {
+    const id = current();
+    if (!id) return;
+    const url = location.origin + location.pathname + "#" + id;
+    navigator.clipboard.writeText(url).catch(()=>{});
+  };
+  document.getElementById("share").addEventListener("click", e => { e.preventDefault(); share(); });
 
   // Keyboard: space = play/pause, arrows = prev/next
   addEventListener("keydown", e => {
