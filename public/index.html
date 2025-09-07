@@ -129,10 +129,8 @@
         onReady: () => { console.log("Ready"); resolveReady(); },
         onStateChange: e => {
           if (e.data === YT.PlayerState.ENDED) next();
-          else if (e.data === YT.PlayerState.PLAYING) console.log("Playing");
-          else if (e.data === YT.PlayerState.PAUSED) console.log("Paused");
         },
-        onError: () => { console.log("Error • skipping"); next(); }
+        onError: () => { console.log(`Error • skipping ${current()}`); next(); }
       }
     });
   };
