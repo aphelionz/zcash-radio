@@ -13,7 +13,7 @@ They handle two roles: **Scanner Agent** and **Deployment Agent**.
 - **Language:** Rust
 - **Entry point:** `src/main.rs`
 - **Behavior:**
-  1. Fetch the topic JSON from Discourse (`print=true` or chunked).
+  1. Fetch the topic JSON from Discourse (`print=true`).
   2. Parse each post’s HTML for YouTube links.
   3. Normalize to canonical video IDs.
   4. Deduplicate and overwrite `public/videos.json`.

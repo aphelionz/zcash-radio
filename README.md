@@ -43,7 +43,7 @@ cargo run --release
 ```
 
 This produces `public/videos.json`.
-Use `--topic-url`, `--out`, or `--chunked` to customize the scan.
+Use `--topic-url` or `--out` to customize the scan.
 
 ## Usage
 
