@@ -16,7 +16,7 @@ struct Args {
     )]
     topic_url: String,
 
-    /// Output JSON file (will be created/updated)
+    /// Output JSON file (will be overwritten)
     #[arg(long, default_value = "./public/videos.json")]
     out: PathBuf,
 
@@ -82,12 +82,7 @@ async fn main() -> Result<()> {
         get_topic_chunked(&client, topic_url).await?
     };
 
-    let mut map: HashMap<String, VideoEntry> = if args.out.exists() {
-        let data = fs::read_to_string(&args.out)?;
-        serde_json::from_str(&data).unwrap_or_default()
-    } else {
-        HashMap::with_capacity(posts.len())
-    };
+    let mut map: HashMap<String, VideoEntry> = HashMap::with_capacity(posts.len());
 
     let mut process = |p: Post| {
         let doc = Html::parse_fragment(&p.cooked);
@@ -175,7 +170,7 @@ async fn main() -> Result<()> {
     let json = serde_json::to_string_pretty(&map)?;
     fs::write(&args.out, json)?;
 
-    eprintln!("Upserted {} unique videos into {}", len, args.out.display());
+    eprintln!("Wrote {} unique videos to {}", len, args.out.display());
     Ok(())
 }
 
