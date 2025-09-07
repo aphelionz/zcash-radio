@@ -1,5 +1,4 @@
 use anyhow::Result;
-use clap::Parser;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs};
@@ -8,10 +7,6 @@ use url::Url;
 
 const TOPIC_URL: &str = "https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456";
 const OUT_PATH: &str = "./public/videos.json";
-
-#[derive(Parser, Debug)]
-#[command(name = "zcash-radio-scan", version)]
-struct Args {}
 
 #[derive(Debug, Deserialize)]
 struct Topic {
