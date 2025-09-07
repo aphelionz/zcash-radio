@@ -1,5 +1,4 @@
 use anyhow::Result;
-use clap::Parser;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs};
@@ -9,14 +8,6 @@ use url::Url;
 const TOPIC_URL: &str = "https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456";
 const OUT_PATH: &str = "./public/videos.json";
 
-#[derive(Parser, Debug)]
-#[command(name = "zcash-radio-scan", version)]
-struct Args {
-    /// Use chunked fetching via post_ids (safety valve if print=true ever fails)
-    #[arg(long, default_value_t = false)]
-    chunked: bool,
-}
-
 #[derive(Debug, Deserialize)]
 struct Topic {
     post_stream: PostStream,
@@ -25,8 +16,6 @@ struct Topic {
 #[derive(Debug, Deserialize)]
 struct PostStream {
     posts: Vec<Post>,
-    #[serde(default)]
-    stream: Vec<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -59,7 +48,6 @@ fn is_valid_youtube_id(id: &str) -> bool {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let args = Args::parse();
     let topic_url = TOPIC_URL.trim_end_matches('/');
     let client = reqwest::Client::builder()
         .user_agent("zcash-radio-aphelionz/0.1 (+https://github.com/aphelionz)")
@@ -68,11 +56,16 @@ async fn main() -> Result<()> {
     // Extract and canonicalize YouTube IDs
     let a_sel = Selector::parse("a").unwrap();
 
-    let posts = if !args.chunked {
-        get_topic_print(&client, topic_url).await?
-    } else {
-        get_topic_chunked(&client, topic_url).await?
-    };
+    let url = format!("{}.json?print=true", topic_url);
+    let resp = client.get(&url).send().await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        eprintln!("DISCOURSE ERROR {} -> {}\n{}", url, status, body);
+        anyhow::bail!("GET {}", url);
+    }
+    let topic: Topic = resp.json().await?;
+    let posts = topic.post_stream.posts;
 
     let mut map: HashMap<String, VideoEntry> = HashMap::with_capacity(posts.len());
 
@@ -164,63 +157,4 @@ async fn main() -> Result<()> {
 
     eprintln!("Wrote {} unique videos to {}", len, OUT_PATH);
     Ok(())
-}
-
-async fn get_topic_print(client: &reqwest::Client, topic_url: &str) -> Result<Vec<Post>> {
-    let url = format!("{}.json?print=true", topic_url.trim_end_matches('/'));
-    let resp = client.get(&url).send().await?;
-    if !resp.status().is_success() {
-        let status = resp.status();
-        let body = resp.text().await.unwrap_or_default();
-        eprintln!("DISCOURSE ERROR {} -> {}\n{}", url, status, body);
-        anyhow::bail!("GET {}", url);
-    }
-    let topic: Topic = resp.json().await?;
-    Ok(topic.post_stream.posts)
-}
-
-// Safety valve: fetch first page, then chunk via /t/{id}/posts.json?post_ids[]=...
-async fn get_topic_chunked(client: &reqwest::Client, topic_url: &str) -> Result<Vec<Post>> {
-    let base_url = topic_url.trim_end_matches('/');
-    let base = format!("{}.json", base_url);
-    let resp = client.get(&base).send().await?;
-    if !resp.status().is_success() {
-        let status = resp.status();
-        let body = resp.text().await.unwrap_or_default();
-        eprintln!("DISCOURSE ERROR {} -> {}\n{}", base, status, body);
-        anyhow::bail!("GET {}", base);
-    }
-
-    let t: Topic = resp.json().await?;
-
-    let mut posts = t.post_stream.posts;
-    let stream = t.post_stream.stream;
-    let ids = stream.get(20..).unwrap_or(&[]);
-
-    for chunk in ids.chunks(20) {
-        let post_ids: Vec<String> = chunk.iter().map(|id| format!("post_ids={}", id)).collect();
-        let url = format!("{}/posts.json?{}", base_url, post_ids.join("&"));
-
-        let resp = client.get(&url).send().await?;
-        if !resp.status().is_success() {
-            let status = resp.status();
-            let body = resp.text().await.unwrap_or_default();
-            eprintln!("DISCOURSE ERROR {} -> {}\n{}", url, status, body);
-            // Skip this chunk but continue
-            continue;
-        }
-
-        let topic = match resp.json::<Topic>().await {
-            Ok(topic) => topic,
-            Err(err) => {
-                eprintln!("PARSE ERROR {} -> {}", url, err);
-                // Skip this chunk on parse error
-                continue;
-            }
-        };
-        posts.extend(topic.post_stream.posts);
-
-        tokio::time::sleep(std::time::Duration::from_millis(400)).await;
-    }
-    Ok(posts)
 }
