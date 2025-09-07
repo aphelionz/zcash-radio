@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::Parser;
-use regex::Regex;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, path::PathBuf};
@@ -59,6 +58,13 @@ struct VideoEntry {
     last_seen_at: String,
 }
 
+fn is_valid_youtube_id(id: &str) -> bool {
+    id.len() == 11
+        && id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
@@ -69,7 +75,6 @@ async fn main() -> Result<()> {
 
     // Extract and canonicalize YouTube IDs
     let a_sel = Selector::parse("a").unwrap();
-    let id_pat = Regex::new(r"^[A-Za-z0-9_-]{11}$").unwrap();
 
     let posts = if !args.chunked {
         get_topic_print(&client, topic_url).await?
@@ -104,7 +109,7 @@ async fn main() -> Result<()> {
                     // youtu.be/<ID>
                     if host == "youtu.be" {
                         if let Some(seg) = u.path_segments().and_then(|mut s| s.next()) {
-                            if id_pat.is_match(seg) {
+                            if is_valid_youtube_id(seg) {
                                 return Some(seg.to_string());
                             }
                         }
@@ -121,7 +126,7 @@ async fn main() -> Result<()> {
                             .find(|(k, _)| k == "v")
                             .map(|(_, v)| v.into_owned())
                         {
-                            if id_pat.is_match(&v) {
+                            if is_valid_youtube_id(&v) {
                                 return Some(v);
                             }
                         }
@@ -135,7 +140,7 @@ async fn main() -> Result<()> {
                         .or_else(|| path.strip_prefix("/live/"))
                     {
                         let id = rest.split('/').next().unwrap_or("");
-                        if id_pat.is_match(id) {
+                        if is_valid_youtube_id(id) {
                             return Some(id.to_string());
                         }
                     }
