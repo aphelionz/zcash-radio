@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     let topic_url = args.topic_url.trim_end_matches('/');
     let client = reqwest::Client::builder()
-        .user_agent("zcash-radio/0.1 (+https://github.com/you)")
+        .user_agent("zcash-radio-aphelionz/0.1 (+https://github.com/aphelionz)")
         .build()?;
 
     // Extract and canonicalize YouTube IDs
