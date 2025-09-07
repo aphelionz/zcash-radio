@@ -53,7 +53,6 @@ fn is_valid_youtube_id(id: &str) -> bool {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let _args = Args::parse();
     let topic_url = TOPIC_URL.trim_end_matches('/');
     let client = reqwest::Client::builder()
         .user_agent("zcash-radio-aphelionz/0.1 (+https://github.com/aphelionz)")
