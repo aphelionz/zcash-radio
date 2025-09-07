@@ -5,7 +5,6 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
 };
-use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use url::Url;
 
 const TOPIC_URL: &str = "https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456";
@@ -23,7 +22,6 @@ struct PostStream {
 
 #[derive(Debug, Deserialize)]
 struct Post {
-    id: i64,
     post_number: i64,
     cooked: String,
     #[serde(default)]
@@ -34,12 +32,9 @@ struct Post {
 struct VideoEntry {
     video_id: String,
     canonical_url: String,
-    first_seen_post: i64,
-    first_seen_post_number: i64,
     source_post_url: String,
     #[serde(default)]
     username: String,
-    last_seen_at: String,
 }
 
 fn is_valid_youtube_id(id: &str) -> bool {
@@ -135,23 +130,18 @@ async fn main() -> Result<()> {
 
                 if let Some(video_id) = video_id_opt {
                     let canonical = format!("https://www.youtube.com/watch?v={}", video_id);
-                    let now = OffsetDateTime::now_utc().format(&Rfc3339).unwrap();
 
                     if deny.contains(&video_id) {
                         eprintln!("curation: skipped {}", video_id);
                         continue;
                     }
 
-                    let entry = map.entry(video_id.clone()).or_insert_with(|| VideoEntry {
+                    map.entry(video_id.clone()).or_insert_with(|| VideoEntry {
                         video_id: video_id.clone(),
                         canonical_url: canonical.clone(),
-                        first_seen_post: p.id,
-                        first_seen_post_number: p.post_number,
                         source_post_url: format!("{}/{}", topic_url, p.post_number),
                         username: p.username.clone(),
-                        last_seen_at: now.clone(),
                     });
-                    entry.last_seen_at = now;
                 }
             }
         }
