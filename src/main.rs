@@ -42,13 +42,6 @@ struct VideoEntry {
     last_seen_at: String,
 }
 
-#[derive(Debug)]
-struct DenyItem {
-    id: String,
-    reason: Option<String>,
-    source: Option<String>,
-}
-
 fn is_valid_youtube_id(id: &str) -> bool {
     id.len() == 11
         && id
@@ -63,7 +56,7 @@ async fn main() -> Result<()> {
         .user_agent("zcash-radio-aphelionz/0.1 (+https://github.com/aphelionz)")
         .build()?;
 
-    let (deny, _deny_meta) = load_curation("curation.txt"); // or from --curation
+    let deny = load_curation("curation.txt"); // or from --curation
 
     // Extract and canonicalize YouTube IDs
     let a_sel = Selector::parse("a").unwrap();
@@ -176,11 +169,10 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn load_curation(path: &str) -> (HashSet<String>, Vec<DenyItem>) {
+fn load_curation(path: &str) -> HashSet<String> {
     let mut set = HashSet::new();
-    let mut items = Vec::new();
     let Ok(text) = fs::read_to_string(path) else {
-        return (set, items);
+        return set;
     };
 
     for raw in text.lines() {
@@ -195,20 +187,12 @@ fn load_curation(path: &str) -> (HashSet<String>, Vec<DenyItem>) {
                 continue;
             }
         }
-        // fields: id | reason | source
-        let mut parts = line.split('|').map(|p| p.trim()).filter(|p| !p.is_empty());
-        if let Some(id) = parts.next() {
+        // fields: id | reason | source (reason and source ignored)
+        if let Some(id) = line.split('|').map(|p| p.trim()).next() {
             if is_valid_youtube_id(id) {
-                let reason = parts.next().map(str::to_string);
-                let source = parts.next().map(str::to_string);
                 set.insert(id.to_string());
-                items.push(DenyItem {
-                    id: id.to_string(),
-                    reason,
-                    source,
-                });
             }
         }
     }
-    (set, items)
+    set
 }
