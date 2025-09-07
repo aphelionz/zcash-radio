@@ -15,8 +15,6 @@
   #supportModal .modal-box{background:#1f2937;padding:1.5rem;border-radius:.5rem;max-width:500px;width:90%;color:#d1d5db;position:relative;text-align:center}
   #supportModal .modal-box a,#supportModal .modal-box button{color:#f5a623}
   #supportModal .close{position:absolute;top:.5rem;right:.5rem;background:none;border:0;font-size:1.5rem;line-height:1;color:#d1d5db;cursor:pointer}
-  #supportModal code{display:inline-block;margin:.5rem 0}
-  code{font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(255,255,255,.08);border-radius:999px;padding:.2rem .5rem;color:#e8eef5}
   </style>
 </head>
 <body>
@@ -26,37 +24,32 @@
   </div>
   <footer>
     <a id="source-link" target="_blank" rel="noopener"></a>
+    <a id="nextLink" href="#" onclick="next();return false;" title="Next video (→)" style="margin: 0 7rem;">Next ►</a>
     <a id="supportLink" href="#">Support zcash.radio</a>
   </footer>
 </div>
 <div id="supportModal">
   <div class="modal-box">
     <button id="closeModal" class="close">&times;</button>
-    <h2>Keep the signal flowing. This station is powered by the Zcash community.</h2>
-    <h3>Direct Support</h3>
-    <code id="zcashAddr"></code>
-    <div><img id="zcashQR" alt="Zcash QR"></div>
-    <button id="copyAddr">Copy Address</button> <span id="copyStatus" style="visibility:hidden;margin-left:.5rem">Copied!</span>
+    <h3>zcash.radio is maintained by @aphelionz</h3>
+    <div><img src="ZEC_QR.jpeg" alt="Zcash QR"></div>
+    <button id="copyAddr">Copy Address</button> <span id="copyStatus" style="display:none;">Copied!</span>
     <h3>Join the Pulse</h3>
-    <p>Every track comes from the Zcash Forum. Post what you’re listening to and it might end up here.</p>
-    <a href="https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456" target="_blank" rel="noopener">What Are You Listening To?</a>
+    <p>Post <a href="https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456" target="_blank" rel="noopener">in this thread</a> on the Zcash forum to potentially end up here.</p>
   </div>
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-  // --- config ---------------------------------------------------------------
+  // --- constants / config ---------------------------------------------------
   const LIST_URL = "./videos.json"; // same folder as this file
-  const DEFAULT_ADDR = "u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x";
-  const params = new URLSearchParams(location.search);
-  const addr = params.get("addr") || params.get("ua") || DEFAULT_ADDR;
-  document.getElementById("zcashAddr").textContent = addr;
-  document.getElementById("zcashQR").src = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(addr);
+  const ADDR = "u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x";
+
   document.getElementById("copyAddr").addEventListener("click", () => {
-    navigator.clipboard.writeText(addr).then(() => {
+    navigator.clipboard.writeText(ADDR).then(() => {
       const s = document.getElementById("copyStatus");
-      s.style.visibility = "visible";
-      setTimeout(() => { s.style.visibility = "hidden"; }, 1500);
+      s.style.display = "inline";
+      setTimeout(() => { s.style.display = "none"; }, 1500);
     });
   });
   const $modal = document.getElementById("supportModal");
