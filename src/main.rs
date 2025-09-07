@@ -1,7 +1,10 @@
 use anyhow::Result;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use url::Url;
 
@@ -52,6 +55,8 @@ async fn main() -> Result<()> {
     let client = reqwest::Client::builder()
         .user_agent("zcash-radio-aphelionz/0.1 (+https://github.com/aphelionz)")
         .build()?;
+
+    let deny = load_curation("curation.txt"); // or from --curation
 
     // Extract and canonicalize YouTube IDs
     let a_sel = Selector::parse("a").unwrap();
@@ -132,6 +137,11 @@ async fn main() -> Result<()> {
                     let canonical = format!("https://www.youtube.com/watch?v={}", video_id);
                     let now = OffsetDateTime::now_utc().format(&Rfc3339).unwrap();
 
+                    if deny.contains(&video_id) {
+                        eprintln!("curation: skipped {}", video_id);
+                        continue;
+                    }
+
                     let entry = map.entry(video_id.clone()).or_insert_with(|| VideoEntry {
                         video_id: video_id.clone(),
                         canonical_url: canonical.clone(),
@@ -157,4 +167,32 @@ async fn main() -> Result<()> {
 
     eprintln!("Wrote {} unique videos to {}", len, OUT_PATH);
     Ok(())
+}
+
+fn load_curation(path: &str) -> HashSet<String> {
+    let mut set = HashSet::new();
+    let Ok(text) = fs::read_to_string(path) else {
+        return set;
+    };
+
+    for raw in text.lines() {
+        let mut line = raw.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        // strip inline comment
+        if let Some(i) = line.find('#') {
+            line = line[..i].trim();
+            if line.is_empty() {
+                continue;
+            }
+        }
+        // fields: id | reason | source (reason and source ignored)
+        if let Some(id) = line.split('|').map(|p| p.trim()).next() {
+            if is_valid_youtube_id(id) {
+                set.insert(id.to_string());
+            }
+        }
+    }
+    set
 }
