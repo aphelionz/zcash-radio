@@ -2,24 +2,16 @@ use anyhow::Result;
 use clap::Parser;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{collections::HashMap, fs};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use url::Url;
+
+const TOPIC_URL: &str = "https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456";
+const OUT_PATH: &str = "./public/videos.json";
 
 #[derive(Parser, Debug)]
 #[command(name = "zcash-radio-scan", version)]
 struct Args {
-    /// Discourse topic URL (no .json)
-    #[arg(
-        long,
-        default_value = "https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456"
-    )]
-    topic_url: String,
-
-    /// Output JSON file (will be overwritten)
-    #[arg(long, default_value = "./public/videos.json")]
-    out: PathBuf,
-
     /// Use chunked fetching via post_ids (safety valve if print=true ever fails)
     #[arg(long, default_value_t = false)]
     chunked: bool,
@@ -68,7 +60,7 @@ fn is_valid_youtube_id(id: &str) -> bool {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-    let topic_url = args.topic_url.trim_end_matches('/');
+    let topic_url = TOPIC_URL.trim_end_matches('/');
     let client = reqwest::Client::builder()
         .user_agent("zcash-radio-aphelionz/0.1 (+https://github.com/aphelionz)")
         .build()?;
@@ -168,9 +160,9 @@ async fn main() -> Result<()> {
 
     let len = map.len();
     let json = serde_json::to_string_pretty(&map)?;
-    fs::write(&args.out, json)?;
+    fs::write(OUT_PATH, json)?;
 
-    eprintln!("Wrote {} unique videos to {}", len, args.out.display());
+    eprintln!("Wrote {} unique videos to {}", len, OUT_PATH);
     Ok(())
 }
 
