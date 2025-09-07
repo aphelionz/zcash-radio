@@ -25,9 +25,12 @@ static CURATION_DENYLIST: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
                     return None;
                 }
             }
-            let id = line.split('|').map(|p| p.trim()).next().unwrap_or("");
-            if is_valid_youtube_id(id) {
-                Some(id)
+            if let Some(id) = line.split('|').map(|p| p.trim()).next() {
+                if !id.is_empty() && is_valid_youtube_id(id) {
+                    Some(id)
+                } else {
+                    None
+                }
             } else {
                 None
             }
