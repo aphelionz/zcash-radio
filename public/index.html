@@ -9,13 +9,12 @@
   #wrap{position:fixed;inset:0;display:grid;grid-template-rows:1fr auto}
   #player{position:relative}
   #yt{position:absolute;inset:0;width:100%;height:100%}
-  footer{padding:.5rem .75rem;font-size:.9rem;color:#9fb0c6;background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0));display:flex;flex-direction:column;align-items:center;gap:.5rem}
-  footer .f-left,footer .f-center,footer .f-right{text-align:center}
-  footer .f-left a{font-size:.8rem;color:inherit;text-decoration:none;opacity:.8}
-  footer .f-center{display:flex;gap:1rem;justify-content:center}
-  footer button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
-  @media(min-width:600px){footer{flex-direction:row;justify-content:space-between}footer .f-left,footer .f-center,footer .f-right{flex:1}footer .f-left{text-align:left}footer .f-right{text-align:right}}
-  code{font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(255,255,255,.08);border-radius:999px;padding:.2rem .5rem;color:#e8eef5}
+  footer{padding:.5rem .75rem;font-size:.9rem;color:#9fb0c6;background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0));display:flex;justify-content:center;gap:1rem}
+  footer a{color:inherit;text-decoration:none}
+  #supportModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);align-items:center;justify-content:center}
+  #supportModal .modal-box{background:#1f2937;padding:1.5rem;border-radius:.5rem;max-width:500px;width:90%;color:#d1d5db;position:relative;text-align:center}
+  #supportModal .modal-box a,#supportModal .modal-box button{color:#f5a623}
+  #supportModal .close{position:absolute;top:.5rem;right:.5rem;background:none;border:0;font-size:1.5rem;line-height:1;color:#d1d5db;cursor:pointer}
   </style>
 </head>
 <body>
@@ -24,27 +23,39 @@
     <div id="yt"></div>
   </div>
   <footer>
-    <div class="f-left"><a id="source-link" target="_blank" rel="noopener"></a></div>
-    <div class="f-center">
-      <a id="share" href="#">Share</a>
-    </div>
-    <div class="f-right">
-      <button id="ua-btn"><code id="ua"></code></button>
-    </div>
+    <a id="source-link" target="_blank" rel="noopener"></a>
+    <a id="nextLink" href="#" onclick="next();return false;" title="Next video (→)" style="margin: 0 7rem;">Next ►</a>
+    <a id="supportLink" href="#">Support zcash.radio</a>
   </footer>
+</div>
+<div id="supportModal">
+  <div class="modal-box">
+    <button id="closeModal" class="close">&times;</button>
+    <h3>zcash.radio is maintained by @aphelionz</h3>
+    <div><img src="ZEC_QR.jpeg" alt="Zcash QR"></div>
+    <button id="copyAddr">Copy Address</button> <span id="copyStatus" style="display:none;">Copied!</span>
+    <h3>Join the Pulse</h3>
+    <p>Post <a href="https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456" target="_blank" rel="noopener">in this thread</a> on the Zcash forum to potentially end up here.</p>
+  </div>
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-  // --- config ---------------------------------------------------------------
+  // --- constants / config ---------------------------------------------------
   const LIST_URL = "./videos.json"; // same folder as this file
-  const DEFAULT_UA = "u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x";
-  const params = new URLSearchParams(location.search);
-  const fullUA = params.get("ua") || params.get("addr") || DEFAULT_UA;
-  const shorten = s => s.length > 16 ? `${s.slice(0,8)}…${s.slice(-8)}` : s;
-  const $uaBtn = document.getElementById("ua-btn");
-  $uaBtn.querySelector("code").textContent = shorten(fullUA);
-  $uaBtn.addEventListener("click", () => navigator.clipboard.writeText(fullUA));
+  const ADDR = "u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x";
+
+  document.getElementById("copyAddr").addEventListener("click", () => {
+    navigator.clipboard.writeText(ADDR).then(() => {
+      const s = document.getElementById("copyStatus");
+      s.style.display = "inline";
+      setTimeout(() => { s.style.display = "none"; }, 1500);
+    });
+  });
+  const $modal = document.getElementById("supportModal");
+  document.getElementById("supportLink").addEventListener("click", e => { e.preventDefault(); $modal.style.display = "flex"; });
+  document.getElementById("closeModal").addEventListener("click", () => { $modal.style.display = "none"; });
+  $modal.addEventListener("click", e => { if (e.target === $modal) $modal.style.display = "none"; });
 
   // --- state ----------------------------------------------------------------
   let YTPlayer = null;
@@ -93,7 +104,7 @@
     const info = meta[id];
     if (info && info.source_post_url) {
       $src.href = info.source_post_url;
-      $src.textContent = info.username ? `@${info.username}` : "source";
+      $src.textContent = info.username ? `Posted by @${info.username}` : "Posted by source";
       $src.style.visibility = "visible";
     } else {
       $src.removeAttribute("href");
@@ -130,14 +141,6 @@
       console.log(String(e));
     }
   })();
-
-  const share = () => {
-    const id = current();
-    if (!id) return;
-    const url = location.origin + location.pathname + "#" + id;
-    navigator.clipboard.writeText(url).catch(()=>{});
-  };
-  document.getElementById("share").addEventListener("click", e => { e.preventDefault(); share(); });
 
   // Keyboard: space = play/pause, arrows = prev/next
   addEventListener("keydown", e => {
