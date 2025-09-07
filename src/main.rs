@@ -31,7 +31,6 @@ struct Post {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct VideoEntry {
     video_id: String,
-    canonical_url: String,
     source_post_url: String,
     #[serde(default)]
     username: String,
@@ -129,8 +128,6 @@ async fn main() -> Result<()> {
                 });
 
                 if let Some(video_id) = video_id_opt {
-                    let canonical = format!("https://www.youtube.com/watch?v={}", video_id);
-
                     if deny.contains(&video_id) {
                         eprintln!("curation: skipped {}", video_id);
                         continue;
@@ -138,7 +135,6 @@ async fn main() -> Result<()> {
 
                     map.entry(video_id.clone()).or_insert_with(|| VideoEntry {
                         video_id: video_id.clone(),
-                        canonical_url: canonical.clone(),
                         source_post_url: format!("{}/{}", topic_url, p.post_number),
                         username: p.username.clone(),
                     });
