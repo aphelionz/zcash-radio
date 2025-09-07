@@ -4,11 +4,36 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     fs,
+    sync::LazyLock,
 };
 use url::Url;
 
 const TOPIC_URL: &str = "https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456";
 const OUT_PATH: &str = "./public/videos.json";
+
+static CURATION_DENYLIST: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
+    include_str!("../curation.txt")
+        .lines()
+        .filter_map(|raw| {
+            let mut line = raw.trim();
+            if line.is_empty() || line.starts_with('#') {
+                return None;
+            }
+            if let Some(i) = line.find('#') {
+                line = line[..i].trim();
+                if line.is_empty() {
+                    return None;
+                }
+            }
+            let id = line.split('|').map(|p| p.trim()).next().unwrap_or("");
+            if is_valid_youtube_id(id) {
+                Some(id)
+            } else {
+                None
+            }
+        })
+        .collect()
+});
 
 #[derive(Debug, Deserialize)]
 struct Topic {
@@ -49,8 +74,6 @@ async fn main() -> Result<()> {
     let client = reqwest::Client::builder()
         .user_agent("zcash-radio-aphelionz/0.1 (+https://github.com/aphelionz)")
         .build()?;
-
-    let deny = load_curation("curation.txt"); // or from --curation
 
     // Extract and canonicalize YouTube IDs
     let a_sel = Selector::parse("a").unwrap();
@@ -128,7 +151,7 @@ async fn main() -> Result<()> {
                 });
 
                 if let Some(video_id) = video_id_opt {
-                    if deny.contains(&video_id) {
+                    if CURATION_DENYLIST.contains(video_id.as_str()) {
                         eprintln!("curation: skipped {}", video_id);
                         continue;
                     }
@@ -153,32 +176,4 @@ async fn main() -> Result<()> {
 
     eprintln!("Wrote {} unique videos to {}", len, OUT_PATH);
     Ok(())
-}
-
-fn load_curation(path: &str) -> HashSet<String> {
-    let mut set = HashSet::new();
-    let Ok(text) = fs::read_to_string(path) else {
-        return set;
-    };
-
-    for raw in text.lines() {
-        let mut line = raw.trim();
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
-        // strip inline comment
-        if let Some(i) = line.find('#') {
-            line = line[..i].trim();
-            if line.is_empty() {
-                continue;
-            }
-        }
-        // fields: id | reason | source (reason and source ignored)
-        if let Some(id) = line.split('|').map(|p| p.trim()).next() {
-            if is_valid_youtube_id(id) {
-                set.insert(id.to_string());
-            }
-        }
-    }
-    set
 }
