@@ -130,7 +130,7 @@
         onStateChange: e => {
           if (e.data === YT.PlayerState.ENDED) next();
         },
-        onError: () => { console.log(`Error • skipping ${current()}`); next(); }
+        onError: () => { console.log(`Error • skipping ${current() || 'unknown track'}`); next(); }
       }
     });
   };
