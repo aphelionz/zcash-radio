@@ -1,14 +1,36 @@
-# Curation file for YouTube channel
-# Rules:
-# ...
+# Curation Policy for Zcash Radio
+# -------------------------------
+# Our mission is to provide a high-quality experience, while secondarily rewarding high-quality visual content. As such, we curate
+# the playlist by maintaining a denylist of YouTube IDs and our reasoning below.
+# 
+# Submit content to Zcash.radio by joining the Zcash Community Forum and posting in this thread:
+#   https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456
+#
+# - This file is maintained manually. If you wish to request a change, please open an issue or PR on GitHub.
+# - The default is inclusion despite genre. Tracks are only removed for clear reasons.
+#
+# Primary Removal Categories
+# - Non-music videos
+# - Advertisements
+# - Product promos
+# - Conference talks or interviews
+# - Shorts/reels with no real musical content
+# - Meme tracks (e.g. “Bitcoin will be pump” loop videos)
+# - Dead links or region-locked videos
+#
+# We may consider removing album-length tracks (full albums, DJ sets, live concerts)
+#
+# Sparingly, there are a few tracks that I (@aphelionz) simply don't like. My gallery, my curation :)
+#
+# When a track is removed, an entry is added below with the following format:
+# <YouTube Video ID> | <Reason/Tag>
 
-G7g44Bca1UQ
-Nq5LMGtBmis
-ip-zHi2GhmQ
-tUibbnw3y-o
+G7g44Bca1UQ | meme: Bitcoin will be pump
+1pqIFDI18ZY | meme: Crypto Christmas
 
-5BXtgq0Nhsc | not music
-_CVDdKot54A | not music
+5BXtgq0Nhsc | non_music
+_CVDdKot54A | non_music
+
 2aW7HweAf3o | 404
 jbasz2BIAjg | 404
 lwKD3wm57UQ | 404
@@ -35,3 +57,6 @@ qOEMHg43psI | 404
 tnAHN1guHbs | 404
 2jEDFshChow | 404
 UlR4Z4AZ1ho | 404
+
+Nq5LMGtBmis | aphelionz: VULFPECK - It Gets Funkier
+tUibbnw3y-o | aphelionz: Phantom of the Opera - Music of the Night
