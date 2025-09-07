@@ -16,7 +16,7 @@ They handle two roles: **Scanner Agent** and **Deployment Agent**.
   1. Fetch the topic JSON from Discourse (`print=true` or chunked).
   2. Parse each post’s HTML for YouTube links.
   3. Normalize to canonical video IDs.
-  4. Deduplicate and upsert into `public/videos.json`.
+  4. Deduplicate and overwrite `public/videos.json`.
   5. Include metadata: first-seen post, last-seen timestamp, and source link.
 
 **Trigger:** Runs inside the `build` job of the GitHub Actions workflow.
