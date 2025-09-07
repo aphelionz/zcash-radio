@@ -43,7 +43,8 @@ cargo run --release
 ```
 
 This produces `public/videos.json`.
-Use `--topic-url` or `--out` to customize the scan.
+To change the source thread or output path, modify the `TOPIC_URL` and
+`OUT_PATH` constants in `src/main.rs`.
 
 ## Usage
 
