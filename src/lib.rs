@@ -113,6 +113,9 @@ pub fn process_posts(
     topic_url: &str,
     denylist: &HashSet<&str>,
 ) -> HashMap<String, VideoEntry> {
+    if posts.is_empty() {
+        return HashMap::new();
+    }
     let a_sel = Selector::parse("a").unwrap();
     let mut map: HashMap<String, VideoEntry> = HashMap::with_capacity(posts.len());
     for p in posts {
@@ -209,6 +212,14 @@ mod tests {
             None
         );
         assert_eq!(extract_video_id("https://www.youtube.com/user/some"), None);
+    }
+
+    #[test]
+    fn test_process_posts_empty() {
+        let posts = Vec::new();
+        let denylist: HashSet<&str> = HashSet::new();
+        let map = process_posts(&posts, "https://forum", &denylist);
+        assert!(map.is_empty());
     }
 
     #[test]
