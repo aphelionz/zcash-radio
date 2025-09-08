@@ -3,7 +3,7 @@ use reqwest::Client;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json;
-use std::collections::{HashMap, HashSet};
+use std::collections::{hash_map::Entry, HashMap, HashSet};
 use std::fs;
 use std::sync::LazyLock;
 use url::Url;
@@ -127,11 +127,17 @@ pub fn process_posts(
                         eprintln!("curation: skipped {}", video_id);
                         continue;
                     }
-                    map.entry(video_id.clone()).or_insert_with(|| VideoEntry {
-                        video_id: video_id.clone(),
-                        source_post_url: format!("{}/{}", topic_url, p.post_number),
-                        username: p.username.clone(),
-                    });
+                    let video_id_clone = video_id.clone();
+                    match map.entry(video_id) {
+                        Entry::Vacant(v) => {
+                            v.insert(VideoEntry {
+                                video_id: video_id_clone,
+                                source_post_url: format!("{}/{}", topic_url, p.post_number),
+                                username: p.username.clone(),
+                            });
+                        }
+                        Entry::Occupied(_) => {}
+                    }
                 }
             }
         }
