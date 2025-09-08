@@ -65,7 +65,7 @@ pub fn is_valid_youtube_id(id: &str) -> bool {
 
 pub fn extract_video_id(href: &str) -> Option<String> {
     let u = Url::parse(href).ok()?;
-    let host = u.host_str()?.to_lowercase();
+    let host = u.host_str()?.to_ascii_lowercase();
     let is_youtube = host == "youtu.be" || host.ends_with("youtube.com");
     if !is_youtube {
         return None;
