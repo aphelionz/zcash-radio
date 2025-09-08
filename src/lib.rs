@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 use std::fs;
+use std::io::{BufWriter, Write};
 use std::sync::LazyLock;
 use url::Url;
 
@@ -159,8 +160,10 @@ pub async fn run(topic_url: &str, out_path: &str) -> Result<usize> {
     let posts = topic.post_stream.posts;
     let map = process_posts(&posts, topic_url, &CURATION_DENYLIST);
     let len = map.len();
-    let json = serde_json::to_string_pretty(&map)?;
-    fs::write(out_path, json)?;
+    let file = fs::File::create(out_path)?;
+    let mut writer = BufWriter::new(file);
+    serde_json::to_writer_pretty(&mut writer, &map)?;
+    writer.flush()?;
     eprintln!("Wrote {} unique videos to {}", len, out_path);
     Ok(len)
 }
