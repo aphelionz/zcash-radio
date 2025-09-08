@@ -116,6 +116,9 @@ pub fn process_posts(
     let a_sel = Selector::parse("a").unwrap();
     let mut map: HashMap<String, VideoEntry> = HashMap::with_capacity(posts.len());
     for p in posts {
+        if !p.cooked.contains("youtu") {
+            continue;
+        }
         let doc = Html::parse_fragment(&p.cooked);
         for a in doc.select(&a_sel) {
             if let Some(href) = a.value().attr("href") {
