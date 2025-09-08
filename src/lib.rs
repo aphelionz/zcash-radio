@@ -96,11 +96,13 @@ pub fn extract_video_id(href: &str) -> Option<String> {
         return None;
     }
 
-    if let Some(rest) = path
-        .strip_prefix("/shorts/")
-        .or_else(|| path.strip_prefix("/embed/"))
-        .or_else(|| path.strip_prefix("/live/"))
-    {
+    let rest = match path {
+        p if p.starts_with("/shorts/") => Some(&p["/shorts/".len()..]),
+        p if p.starts_with("/embed/") => Some(&p["/embed/".len()..]),
+        p if p.starts_with("/live/") => Some(&p["/live/".len()..]),
+        _ => None,
+    };
+    if let Some(rest) = rest {
         let id = rest.split('/').next().unwrap_or("");
         if is_valid_youtube_id(id) {
             return Some(id.to_string());
