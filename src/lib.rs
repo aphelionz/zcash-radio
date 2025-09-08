@@ -12,7 +12,7 @@ static CLIENT: LazyLock<Client> = LazyLock::new(|| {
     Client::builder()
         .user_agent("zcash-radio-aphelionz/0.1 (+https://github.com/aphelionz)")
         .build()
-        .expect("client")
+        .expect("Failed to build HTTP client")
 });
 
 pub static CURATION_DENYLIST: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
