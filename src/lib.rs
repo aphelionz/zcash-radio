@@ -15,6 +15,8 @@ static CLIENT: LazyLock<Client> = LazyLock::new(|| {
         .expect("Failed to build HTTP client")
 });
 
+static A_SELECTOR: LazyLock<Selector> = LazyLock::new(|| Selector::parse("a").unwrap());
+
 pub static CURATION_DENYLIST: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     include_str!("../curation.txt")
         .lines()
@@ -113,11 +115,10 @@ pub fn process_posts(
     topic_url: &str,
     denylist: &HashSet<&str>,
 ) -> HashMap<String, VideoEntry> {
-    let a_sel = Selector::parse("a").unwrap();
     let mut map: HashMap<String, VideoEntry> = HashMap::with_capacity(posts.len());
     for p in posts {
         let doc = Html::parse_fragment(&p.cooked);
-        for a in doc.select(&a_sel) {
+        for a in doc.select(&*A_SELECTOR) {
             if let Some(href) = a.value().attr("href") {
                 if !(href.contains("youtu.be") || href.contains("youtube.com")) {
                     continue;
