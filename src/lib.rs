@@ -8,6 +8,13 @@ use std::fs;
 use std::sync::LazyLock;
 use url::Url;
 
+static CLIENT: LazyLock<Client> = LazyLock::new(|| {
+    Client::builder()
+        .user_agent("zcash-radio-aphelionz/0.1 (+https://github.com/aphelionz)")
+        .build()
+        .expect("Failed to build HTTP client")
+});
+
 pub static CURATION_DENYLIST: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     include_str!("../curation.txt")
         .lines()
@@ -134,12 +141,8 @@ pub fn process_posts(
 
 pub async fn run(topic_url: &str, out_path: &str) -> Result<usize> {
     let topic_url = topic_url.trim_end_matches('/');
-    let client = Client::builder()
-        .user_agent("zcash-radio-aphelionz/0.1 (+https://github.com/aphelionz)")
-        .build()?;
-
     let url = format!("{}.json?print=true", topic_url);
-    let resp = client.get(&url).send().await?;
+    let resp = CLIENT.get(&url).send().await?;
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
