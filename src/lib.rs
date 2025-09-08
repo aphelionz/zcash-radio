@@ -11,26 +11,14 @@ use url::Url;
 pub static CURATION_DENYLIST: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     include_str!("../curation.txt")
         .lines()
-        .filter_map(|raw| {
-            let mut line = raw.trim();
-            if line.is_empty() || line.starts_with('#') {
-                return None;
-            }
-            if let Some(i) = line.find('#') {
-                line = line[..i].trim();
-                if line.is_empty() {
-                    return None;
-                }
-            }
-            if let Some(id) = line.split('|').map(|p| p.trim()).next() {
-                if !id.is_empty() && is_valid_youtube_id(id) {
-                    Some(id)
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
+        .filter_map(|l| {
+            l.split('#')
+                .next()
+                .map(str::trim)
+                .filter(|l| !l.is_empty())
+                .and_then(|l| l.split('|').next())
+                .map(str::trim)
+                .filter(|id| !id.is_empty() && is_valid_youtube_id(id))
         })
         .collect()
 });
