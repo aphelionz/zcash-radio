@@ -81,4 +81,4 @@ Guidelines:
 
 ### License
 
-Currently unlicensed. Do whatever you want with it.
+This project is licensed under the MIT License.
