@@ -119,6 +119,9 @@ pub fn process_posts(
 ) -> HashMap<String, VideoEntry> {
     let mut map: HashMap<String, VideoEntry> = HashMap::with_capacity(posts.len());
     for p in posts {
+        if !p.cooked.contains("youtu") {
+            continue;
+        }
         let doc = Html::parse_fragment(&p.cooked);
         for a in doc.select(&*A_SELECTOR) {
             if let Some(href) = a.value().attr("href") {
