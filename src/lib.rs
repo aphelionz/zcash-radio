@@ -114,7 +114,7 @@ pub fn extract_video_id(href: &str) -> Option<String> {
 }
 
 pub fn process_posts(
-    posts: Vec<Post>,
+    posts: &[Post],
     topic_url: &str,
     denylist: &HashSet<&str>,
 ) -> HashMap<String, VideoEntry> {
@@ -160,7 +160,7 @@ pub async fn run(topic_url: &str, out_path: &str) -> Result<usize> {
     }
     let topic: Topic = resp.json().await?;
     let posts = topic.post_stream.posts;
-    let map = process_posts(posts, topic_url, &CURATION_DENYLIST);
+    let map = process_posts(&posts, topic_url, &CURATION_DENYLIST);
     let len = map.len();
     let json = serde_json::to_string_pretty(&map)?;
     fs::write(out_path, json)?;
@@ -239,7 +239,7 @@ mod tests {
             },
         ];
         let denylist: HashSet<&str> = HashSet::from(["AAAAAAAAAAA"]);
-        let map = process_posts(posts, "https://forum", &denylist);
+        let map = process_posts(&posts, "https://forum", &denylist);
         assert_eq!(map.len(), 1);
         let entry = map.get("BBBBBBBBBBB").unwrap();
         assert_eq!(entry.source_post_url, "https://forum/2");
