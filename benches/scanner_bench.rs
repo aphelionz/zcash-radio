@@ -5,7 +5,6 @@ use httpmock::MockServer;
 use tempfile::tempdir;
 use tokio::runtime::Runtime;
 use zcash_radio_scan::{process_posts, run, Post};
-use std::sync::Arc;
 
 fn bench_process_posts(c: &mut Criterion) {
     // Generate a list of posts with unique YouTube links
@@ -50,18 +49,19 @@ fn bench_run_with_mock(c: &mut Criterion) {
             .json_body_obj(&topic_json);
     });
 
-    let url = Arc::new(format!("{}/topic", server.base_url()));
+    let url = format!("{}/topic", server.base_url());
     let tmp_dir = tempdir().unwrap();
-    let out_path = tmp_dir.path().join("videos.json");
-    let out_path = Arc::new(out_path.to_str().unwrap().to_string());
+    let out_path = tmp_dir
+        .path()
+        .join("videos.json")
+        .to_string_lossy()
+        .into_owned();
     let rt = Runtime::new().unwrap();
 
     c.bench_function("run_with_mock", |b| {
-        let url = Arc::clone(&url);
-        let out_path = Arc::clone(&out_path);
-        b.to_async(&rt).iter(move || {
-            let url = Arc::clone(&url);
-            let out_path = Arc::clone(&out_path);
+        b.to_async(&rt).iter(|| {
+            let url = url.clone();
+            let out_path = out_path.clone();
             async move {
                 run(black_box(&url), black_box(&out_path))
                     .await
