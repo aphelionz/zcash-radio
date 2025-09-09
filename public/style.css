@@ -18,20 +18,25 @@ html,body {
 }
 
 #wrap {
-  position: fixed;
-  inset: 0;
+  min-height: 100vh;
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  place-items: center;
+  grid-template-rows: auto 1fr;
+  align-content: center;
+  justify-items: center;
+  gap: 1rem;
 }
 
-header { width: 100%; max-width: 1280px; }
+header, #stage { position: relative; z-index: 1; }
+header {
+  width: 100%;
+  text-align: center;
+  color: var(--zcash-gold);
+}
+header h1 { margin: .5rem 0; font-size: 1.5rem; }
 
 #stage {
-  position: relative;
-  width: 100%;
+  width: min(100%, calc(75vh * 16 / 9), 1280px);
   aspect-ratio: 16 / 9;
-  max-width: 1280px;
   margin: auto;
   border: 1px solid var(--zcash-gold);
   box-shadow: 0 0 8px rgba(255,210,106,.15);
@@ -48,7 +53,7 @@ header { width: 100%; max-width: 1280px; }
 #yt { position:absolute; inset:0; width:100%; height:100%; }
 
 #bg-grid {
-  position: absolute;
+  position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
@@ -56,29 +61,30 @@ header { width: 100%; max-width: 1280px; }
   opacity: .1;
   filter: blur(.5px);
   animation: scan 3s steps(2,end) infinite;
+  z-index: 0;
 }
 
 footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
   padding: .5rem .75rem;
   font-size: .9rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   color: var(--steel-400);
-  max-width: 1280px;
-  width: 100%;
   background: linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0));
 }
-
 #source-link {
-  flex: 1 1 100%;
-  text-align: center;
-  padding: 0;
-  border: 0;
+  justify-self: start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
+#nextLink { justify-self: center; }
+#supportLink { justify-self: end; }
 footer a {
   color: var(--zcash-gold);
   text-decoration: none;
@@ -123,13 +129,8 @@ footer a:hover { opacity: .8; }
   cursor: pointer;
 }
 
-@media (max-width:1024px) {
-  #stage { max-width: 960px; box-shadow: 0 0 6px rgba(255,210,106,.2); }
-}
-@media (max-width:768px) {
-  #stage { max-width: 100%; }
-  #bg-grid .v { display: none; }
-}
+@media (max-width:1024px) { #stage { box-shadow: 0 0 6px rgba(255,210,106,.2); } }
+@media (max-width:768px) { #bg-grid .v { display: none; } }
 @media (max-width:480px) {
   footer { font-size: .8rem; }
   footer a.pill { padding: .25rem .5rem; }
