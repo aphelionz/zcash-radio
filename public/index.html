@@ -4,32 +4,37 @@
 <meta charset="utf-8">
 <title>Zcash Radio</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-  html,body{height:100%;margin:0;background:#0b0e13;color:#e8eef5;font:16px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;overflow-x:hidden}
-  #wrap{position:fixed;inset:0;display:grid;grid-template-rows:1fr auto}
-  #player{position:relative}
-  #yt{position:absolute;inset:0;width:100%;height:100%}
-  footer{padding:.5rem .75rem;font-size:.9rem;color:#9fb0c6;background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0));display:flex;align-items:center;gap:1rem;white-space:nowrap}
-  footer a{color:inherit;text-decoration:none;white-space:nowrap;text-align:center}
-  #source-link{text-align:left;flex:0 0 auto;}
-  #supportLink{text-align:right;flex:0 0 auto;}
-  #nextLink{margin:0;flex:1;}
-  @media (max-width:480px){footer{font-size:.8rem}}
-  #supportModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);align-items:center;justify-content:center}
-  #supportModal .modal-box{background:#1f2937;padding:1.5rem;border-radius:.5rem;max-width:500px;width:90%;color:#d1d5db;position:relative;text-align:center}
-  #supportModal .modal-box a,#supportModal .modal-box button{color:#f5a623}
-  #supportModal .close{position:absolute;top:.5rem;right:.5rem;background:none;border:0;font-size:1.5rem;line-height:1;color:#d1d5db;cursor:pointer}
-  </style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="wrap">
-  <div id="player">
+  <header id="ticker"></header>
+  <svg id="bg-grid" aria-hidden="true" viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice">
+    <g stroke="var(--steel-600)" stroke-width=".25">
+      <path opacity=".15" d="M0 90H160M0 80H160M0 70H160M0 60H160M0 50H160M0 40H160M0 30H160"/>
+      <g class="v" opacity=".15">
+        <path d="M0 90L80 0"/>
+        <path d="M20 90L80 0"/>
+        <path d="M40 90L80 0"/>
+        <path d="M60 90L80 0"/>
+        <path d="M100 90L80 0"/>
+        <path d="M120 90L80 0"/>
+        <path d="M140 90L80 0"/>
+        <path d="M160 90L80 0"/>
+      </g>
+    </g>
+    <g opacity=".05" fill="var(--zcash-gold)">
+      <path d="M80 15H40L20 30v35c0 20 12 37 40 48c28-11 40-28 40-48V30Z"/>
+      <path fill="var(--ink-1000)" d="M57 33h22l-15 24h15v8H44l15-24H44v-8z"/>
+    </g>
+  </svg>
+  <div id="stage">
     <div id="yt"></div>
   </div>
   <footer>
     <a id="source-link" target="_blank" rel="noopener"></a>
-    <a id="nextLink" href="#" onclick="next();return false;" title="Play next song">Next ►</a>
-    <a id="supportLink" href="#">Support zcash.radio</a>
+    <a id="nextLink" class="pill" href="#" onclick="next();return false;" title="Play next song">Next ►</a>
+    <a id="supportLink" class="pill" href="#">Support zcash.radio</a>
   </footer>
 </div>
 <div id="supportModal">
