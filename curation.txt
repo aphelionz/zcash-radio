@@ -30,6 +30,7 @@ G7g44Bca1UQ | meme: Bitcoin will be pump
 GaoLU6zKaws | meme: Sexy Sax Man Careless Whisper
 ncq-6ijmYe8 | meme: ZEC to the moon
 7eIUOUfhoJ8 | meme: The Privacy Song
+1TewCPi92ro | non_music: ITS FRIDAY MUFASA
 # No, I'm not removing the Zcash anthem :)
 
 iH1vZOhP260 | short: gen alpha dancing
@@ -42,7 +43,10 @@ yAJ6BtZDhUk | non_music: Ronald J Deibert at TedXToronto
 1zdeqBp2Njc | non_music: Shrek Pied Piper
 qxOeWuAHOiw | non_music: Joe Rogan Kanye West Interview
 FpaoCUEhZJM | non_music: Tracklib Sample Breakdown
-6_CZpFqvDQo | 35 Year Old Commodore 64 Easter Egg
+6_CZpFqvDQo | non_music: 35 Year Old Commodore 64 Easter Egg
+-KZ8fD9dy7c | non_music: Black Screen Thunderstorm
+MICPyrnGYwg | non_music: Tombstone Movie Clip
+IUDTlvagjJA | non_music: Virtual Barber Shop
 
 2aW7HweAf3o | 404
 jbasz2BIAjg | 404
@@ -78,3 +82,4 @@ ISly1Z1gOQQ | 404
 Nq5LMGtBmis | personal_preference: VULFPECK - It Gets Funkier
 tUibbnw3y-o | personal_preference: Phantom of the Opera - Music of the Night
 7odMzSb6WUQ | personal_preference: Paul Oakenfold - Starry Eyed Surprise
+dmoDc3RwrMM | personal_preference: Barenaked Ladies - If I Had $1,000,000
