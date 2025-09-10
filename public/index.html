@@ -162,21 +162,38 @@
   };
 
   async function getZecStats() {
-    const res = await fetch('https://api.blockchair.com/zcash/stats');
-    const json = await res.json();
-    // Height lives here on current API; keep a fallback for safety:
-    return {
-      height: json?.data?.best_block_height ?? json?.data?.blocks ?? null,
-      usd_zec: json?.data?.market_price_usd ?? null,
-      btc_zec: json?.data?.market_price_btc ?? null
+    try {
+      const res = await fetch('https://api.blockchair.com/zcash/stats');
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      const json = await res.json();
+      // Height lives here on current API; keep a fallback for safety:
+      return {
+        height: json?.data?.best_block_height ?? json?.data?.blocks ?? null,
+        usd_zec: json?.data?.market_price_usd ?? null,
+        btc_zec: json?.data?.market_price_btc ?? null
+      }
+    } catch (e) {
+      console.error("Failed to fetch ZEC stats:", e);
+      return {
+        height: null,
+        usd_zec: null,
+        btc_zec: null
+      };
     }
   }
 
   async function updateStats() {
-    const stats = await getZecStats();
-    document.getElementById("blockHeight").textContent = stats.height !== null ? stats.height : "N/A";
-    document.getElementById("USDZEC").textContent = stats.usd_zec !== null ? nfUSD.format(stats.usd_zec) : "N/A";
-    document.getElementById("BTCZEC").textContent = stats.btc_zec !== null ? nfBTC.format(stats.btc_zec) : "N/A";
+    try {
+      const stats = await getZecStats();
+      document.getElementById("blockHeight").textContent = stats.height !== null ? stats.height : "N/A";
+      document.getElementById("USDZEC").textContent = stats.usd_zec !== null ? nfUSD.format(stats.usd_zec) : "N/A";
+      document.getElementById("BTCZEC").textContent = stats.btc_zec !== null ? nfBTC.format(stats.btc_zec) : "N/A";
+    } catch (e) {
+      console.error("Failed to update stats:", e);
+      document.getElementById("blockHeight").textContent = "N/A";
+      document.getElementById("USDZEC").textContent = "N/A";
+      document.getElementById("BTCZEC").textContent = "N/A";
+    }
   }
 
   setInterval(updateStats, 60000);
