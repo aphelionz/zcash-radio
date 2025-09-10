@@ -2,47 +2,75 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Zcash Radio</title>
+<title>🅩🅚 Radio</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
+  *,*::before,*::after { box-sizing: border-box; }
+  :root { --gutter: .75rem; --seam-gap: 10px; --qr-col: clamp(10rem, 18vw, 15%); }
+  a, .orange { color: #f5a623; }
   html,body{height:100%;margin:0;background:#0b0e13;color:#e8eef5;font:16px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;overflow-x:hidden}
-  #wrap{position:fixed;inset:0;display:grid;grid-template-rows:1fr auto}
-  #player{position:relative}
-  #yt{position:absolute;inset:0;width:100%;height:100%}
-  footer{padding:.5rem .75rem;font-size:.9rem;color:#9fb0c6;background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0));display:flex;align-items:center;gap:1rem;white-space:nowrap}
-  footer a{color:inherit;text-decoration:none;white-space:nowrap;text-align:center}
+  #wrap{display:grid;grid-template-rows:auto minmax(0, 1fr) auto;margin: auto; gap: var(--gutter); min-height: 100dvh; padding: var(--gutter); }
+  header { display: flex; align-items: center; justify-content: space-between; gap: var(--gutter); }
+  header h1 { margin: 0; flex: 0 0 auto; }
+  header marquee { flex: 1 1 auto; min-width: 0; max-width: 50%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: monospace; }
+  main { display: grid; grid-template-columns: minmax(0,1fr) 1px var(--qr-col); gap: 0; min-height: 0; border: 1px solid orange; box-shadow: 0 4px 8px rgba(0,0,0,.3); }
+  .separator{ background: orange; }
+  #boxes { display: flex; flex-direction: column; padding: var(--gutter) var(--gutter) var(--seam-gap); align-items:flex-end; justify-content: space-between; }
+  #player { min-width: 0; min-height: 0; display: flex; flex-direction: column; z-index: 0; justify-content: space-between; }
+  #yt{ width:100%; height:80vh; aspect-ratio: 16/9; min-width:0; min-height:0; }
+  #stats{ display:grid; grid-template-columns: auto 1fr; column-gap:.5rem; row-gap:.25rem; width:100%; font-variant-numeric: tabular-nums; }
+  #stats dt{ justify-self:start; margin:0; opacity:.85; }
+  #stats dd{ justify-self:end; margin:0; }
+  footer{ padding: .5rem .75rem var(--seam-gap); font-size:.9rem; color:#9fb0c6; display: flex; align-items: flex-end; background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0)); white-space:nowrap; }
+  footer a{white-space:nowrap;}
   #source-link{text-align:left;flex:0 0 auto;}
   #supportLink{text-align:right;flex:0 0 auto;}
   #nextLink{margin:0;flex:1;}
   @media (max-width:480px){footer{font-size:.8rem}}
-  #supportModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);align-items:center;justify-content:center}
-  #supportModal .modal-box{background:#1f2937;padding:1.5rem;border-radius:.5rem;max-width:500px;width:90%;color:#d1d5db;position:relative;text-align:center}
-  #supportModal .modal-box a,#supportModal .modal-box button{color:#f5a623}
-  #supportModal .close{position:absolute;top:.5rem;right:.5rem;background:none;border:0;font-size:1.5rem;line-height:1;color:#d1d5db;cursor:pointer}
-  </style>
+
+  /* --- Mobile: stack rows; right column becomes a horizontal bar --- */
+  @media (max-width: 720px){
+    :root{ --qr-col: clamp(9rem, 28vw, 12rem); }
+    main{ grid-template-columns: 1fr; grid-template-rows: auto 1px auto;
+          grid-template-areas:
+            "player"
+            "sep"
+            "boxes";
+        }
+
+    #boxes{ flex-direction: row; align-items: center; justify-content: space-between; gap: var(--gutter); padding: .5rem var(--gutter); min-width: 0; }
+    #stats{ gap: .5rem 1rem; margin: 0; max-width: 40%; font-size: 0.75rem; }
+    #stats dt{ margin:0; opacity:.85; white-space:nowrap;}
+    #stats dd{ margin:0; }
+    #boxes img#copyAddr{ inline-size: var(--qr-col); block-size: var(--qr-col); flex: 0 0 auto; }
+    #yt{ height: auto; aspect-ratio: 16 / 9; }
+  }
+</style>
 </head>
 <body>
 <div id="wrap">
-  <div id="player">
-    <div id="yt"></div>
-  </div>
-  <footer>
-    <a id="source-link" target="_blank" rel="noopener"></a>
-    <a id="nextLink" href="#" onclick="next();return false;" title="Play next song">Next ►</a>
-    <a id="supportLink" href="#">Support zcash.radio</a>
-  </footer>
-</div>
-<div id="supportModal">
-  <div class="modal-box">
-    <button id="closeModal" class="close">&times;</button>
-    <h3>zcash.radio<br /><small>by @aphelionz</small></h3>
-    <div><img width=300 src="ZEC_QR.jpeg" alt="Zcash QR"></div>
-    <button id="copyAddr">Copy Address</button> <span id="copyStatus" style="display:none;">Copied!</span>
-    <p>
-      Submit tracks <a href="https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456" target="_blank" rel="noopener">in this thread.</a>
-    </p>
-    <small>(Subject to <a href="https://github.com/aphelionz/zcash-radio/blob/main/curation.txt">curation</a>).</small>
-  </div>
+  <header>
+    <h1><span class="orange">🅩🅚</span> Radio</h1>
+    <marquee behavior="scroll" direction="left" scrollamount="3" style="font-size:0.9rem;color:#9fb0c6;"> ▶️ Submit tracks in the <a href="https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456" target="_blank" rel="noopener" style="color:#f5a623;">What are you listening to?</a> thread. (Subject to <a href="X" target="_blank" rel="noopener" style="color:#f5a623;">curation</a>.) </marquee>
+  </header>
+  <main>
+    <div id="player">
+      <div id="yt"></div>
+      <footer>
+        <a id="nextLink" href="#" onclick="next();return false;" title="Play next song">Next ►</a>
+        <a id="source-link" target="_blank" rel="noopener"></a>
+      </footer>
+    </div>
+    <div class="separator" aria-hidden="true"></div>
+    <div id="boxes">
+      <dl id="stats">
+        <dt>Block height:</dt> <dd id="blockHeight"></dd>
+        <dt>USD/ZEC:</dt> <dd id="USDZEC"></dd>
+        <dt>BTC/ZEC</dt> <dd id="BTCZEC"></dd>
+      </dl>
+      <div><img id="copyAddr" width=150 src="ZEC_QR.jpeg" alt="Zcash QR"></div>
+    </div>
+  </main>
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -58,10 +86,6 @@
       setTimeout(() => { s.style.display = "none"; }, 1500);
     });
   });
-  const $modal = document.getElementById("supportModal");
-  document.getElementById("supportLink").addEventListener("click", e => { e.preventDefault(); $modal.style.display = "flex"; });
-  document.getElementById("closeModal").addEventListener("click", () => { $modal.style.display = "none"; });
-  $modal.addEventListener("click", e => { if (e.target === $modal) $modal.style.display = "none"; });
 
   // --- state ----------------------------------------------------------------
   let YTPlayer = null;
@@ -82,6 +106,9 @@
   const current = () => order.length ? ids[order[i]] : null;
   const next = () => { if(!order.length) return; i = (i+1)%order.length; play(); };
   const prev = () => { if(!order.length) return; i = (i-1+order.length)%order.length; play(); };
+
+  const nfUSD = new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', maximumFractionDigits: 2 });
+  const nfBTC = new Intl.NumberFormat('en-US', { maximumSignificantDigits: 6 });
 
   async function loadIds() {
     const r = await fetch(LIST_URL, { cache: "no-store" });
@@ -105,7 +132,6 @@
   function play() {
     const id = current();
     if (!id) return;
-    console.log("Playing " + id);
     location.hash = id;
     const info = meta[id];
     if (info && info.source_post_url) {
@@ -123,7 +149,7 @@
   // YouTube API hook
   window.onYouTubeIframeAPIReady = () => {
     YTPlayer = new YT.Player("yt", {
-      width:"100%", height:"100%",
+      width:"", height:"100%",
       playerVars:{autoplay:1,controls:0,modestbranding:1,rel:0,playsinline:1,iv_load_policy:3,disablekb:1},
       events:{
         onReady: () => { console.log("Ready"); resolveReady(); },
@@ -134,6 +160,27 @@
       }
     });
   };
+
+  async function getZecStats() {
+    const res = await fetch('https://api.blockchair.com/zcash/stats');
+    const json = await res.json();
+    // Height lives here on current API; keep a fallback for safety:
+    return {
+      height: json?.data?.best_block_height ?? json?.data?.blocks ?? null,
+      usd_zec: json?.data?.market_price_usd ?? null,
+      btc_zec: json?.data?.market_price_btc ?? null
+    }
+  }
+
+  async function updateStats() {
+    const stats = await getZecStats();
+    document.getElementById("blockHeight").textContent = stats.height !== null ? stats.height : "N/A";
+    document.getElementById("USDZEC").textContent = stats.usd_zec !== null ? nfUSD.format(stats.usd_zec) : "N/A";
+    document.getElementById("BTCZEC").textContent = stats.btc_zec !== null ? nfBTC.format(stats.btc_zec) : "N/A";
+  }
+
+  setInterval(updateStats, 60000);
+  updateStats();
 
   // Autoplay first video when ready
   (async () => {
