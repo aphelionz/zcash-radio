@@ -39,9 +39,9 @@
         }
 
     #boxes{ flex-direction: row; align-items: center; justify-content: space-between; gap: var(--gutter); padding: .5rem var(--gutter); min-width: 0; }
-    #stats{ gap: .5rem 1rem; margin: 0; max-width: 40%; font-size: 0.75rem; }
-    #stats dt{ margin:0; opacity:.85; white-space:nowrap;}
-    #stats dd{ margin:0; }
+    #stats{ display:flex; flex-wrap:wrap; gap:.5rem 1rem; margin:0; font-size:0.75rem; flex:1 1 60%; min-width:0; }
+    #stats dt{ margin:0; opacity:.85; white-space:nowrap; }
+    #stats dd{ margin:0; white-space:nowrap; }
     #boxes img#copyAddr{ inline-size: var(--qr-col); block-size: var(--qr-col); flex: 0 0 auto; }
     #yt{ height: auto; aspect-ratio: 16 / 9; }
   }
