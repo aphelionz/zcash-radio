@@ -7,7 +7,9 @@
 <style>
   *,*::before,*::after { box-sizing: border-box; }
   :root { --gutter: .75rem; --seam-gap: 10px; --qr-col: clamp(10rem, 18vw, 15%); }
-  a, .orange { color: #f5a623; }
+  a, button { color: #f5a623; }
+  .orange { color: #f5a623; }
+  a, button { touch-action: manipulation; }
   html,body{height:100%;margin:0;background:#0b0e13;color:#e8eef5;font:16px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;overflow-x:hidden}
   #wrap{display:grid;grid-template-rows:auto minmax(0, 1fr) auto;margin: auto; gap: var(--gutter); min-height: 100dvh; padding: var(--gutter); }
   header { display: flex; align-items: center; justify-content: space-between; gap: var(--gutter); }
@@ -22,10 +24,10 @@
   #stats dt{ justify-self:start; margin:0; opacity:.85; }
   #stats dd{ justify-self:end; margin:0; }
   footer{ padding: .5rem .75rem var(--seam-gap); font-size:.9rem; color:#9fb0c6; display: flex; align-items: flex-end; background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0)); white-space:nowrap; }
-  footer a{white-space:nowrap;}
+  footer a, footer button{white-space:nowrap;}
   #source-link{text-align:left;flex:0 0 auto;}
   #supportLink{text-align:right;flex:0 0 auto;}
-  #nextLink{margin:0;flex:1;}
+  #nextLink{margin:0;flex:1;background:none;border:none;padding:0;font:inherit;cursor:pointer;}
   @media (max-width:480px){footer{font-size:.8rem}}
 
   /* --- Mobile: stack rows; right column becomes a horizontal bar --- */
@@ -57,7 +59,7 @@
     <div id="player">
       <div id="yt"></div>
       <footer>
-        <a id="nextLink" href="#" onclick="next();return false;" title="Play next song">Next ►</a>
+        <button id="nextLink" type="button" onclick="next()" title="Play next song">Next ►</button>
         <a id="source-link" target="_blank" rel="noopener"></a>
       </footer>
     </div>
