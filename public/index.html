@@ -11,13 +11,13 @@
   html,body{height:100%;margin:0;background:#0b0e13;color:#e8eef5;font:16px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;overflow-x:hidden}
   #wrap{display:grid;grid-template-rows:auto minmax(0, 1fr) auto;margin: auto; gap: var(--gutter); min-height: 100dvh; padding: var(--gutter); }
   header { display: flex; align-items: center; justify-content: space-between; gap: var(--gutter); }
-  header h1 { margin: 0; flex: 0 0 auto; }
-  header marquee { flex: 1 1 auto; min-width: 0; max-width: 50%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: monospace; }
+  header h1 { font-size: clamp(1.25rem, 4vw, 2.25rem); margin: 0; flex: 0 0 auto; }
+  header marquee { font-size:0.9rem; color:#9fb0c6; flex: 1 1 auto; min-width: 0; max-width: 50%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: monospace; }
   main { display: grid; grid-template-columns: minmax(0,1fr) 1px var(--qr-col); gap: 0; min-height: 0; border: 1px solid orange; box-shadow: 0 4px 8px rgba(0,0,0,.3); }
   .separator{ background: orange; }
   #boxes { display: flex; flex-direction: column; padding: var(--gutter) var(--gutter) var(--seam-gap); align-items:flex-end; justify-content: space-between; }
   #player { min-width: 0; min-height: 0; display: flex; flex-direction: column; z-index: 0; justify-content: space-between; }
-  #yt{ width:100%; height:80vh; aspect-ratio: 16/9; min-width:0; min-height:0; }
+  #yt{ width:100%; height:80vh; min-width:0; min-height:0; }
   #stats{ display:grid; grid-template-columns: auto 1fr; column-gap:.5rem; row-gap:.25rem; width:100%; font-variant-numeric: tabular-nums; }
   #stats dt{ justify-self:start; margin:0; opacity:.85; }
   #stats dd{ justify-self:end; margin:0; }
@@ -51,7 +51,7 @@
 <div id="wrap">
   <header>
     <h1><span class="orange">🅩🅚</span> Radio</h1>
-    <marquee behavior="scroll" direction="left" scrollamount="3" style="font-size:0.9rem;color:#9fb0c6;"> ▶️ Submit tracks in the <a href="https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456" target="_blank" rel="noopener" style="color:#f5a623;">What are you listening to?</a> thread.</marquee>
+    <marquee behavior="scroll" direction="left" scrollamount="3"> ▶️ Submit tracks in the <a href="https://forum.zcashcommunity.com/t/what-are-you-listening-to/20456" target="_blank" rel="noopener" style="color:#f5a623;">What are you listening to?</a> thread.</marquee>
   </header>
   <main>
     <div id="player">
