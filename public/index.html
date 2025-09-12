@@ -23,6 +23,9 @@
   #stats{ display:grid; grid-template-columns: auto 1fr; column-gap:.5rem; row-gap:.25rem; width:100%; font-variant-numeric: tabular-nums; }
   #stats dt{ justify-self:start; margin:0; opacity:.85; }
   #stats dd{ justify-self:end; margin:0; }
+  #qrWrap{ position:relative; }
+  #copyAddr{ cursor:pointer; }
+  #copiedToast{ position:absolute; left:50%; bottom:0; transform:translate(-50%,110%); background:rgba(0,0,0,.75); color:#fff; padding:.25rem .5rem; border-radius:.25rem; font-size:.75rem; }
   footer{ padding: .5rem .75rem var(--seam-gap); font-size:.9rem; color:#9fb0c6; display: flex; align-items: flex-end; background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0)); white-space:nowrap; }
   footer a, footer button{white-space:nowrap;}
   #source-link{text-align:left;flex:0 0 auto;}
@@ -70,7 +73,7 @@
         <dt>USD/ZEC:</dt> <dd id="USDZEC"></dd>
         <dt>BTC/ZEC:</dt> <dd id="BTCZEC"></dd>
       </dl>
-      <div><img id="copyAddr" width=150 src="ZEC_QR.jpeg" alt="Zcash QR"></div>
+      <div id="qrWrap"><img id="copyAddr" role="button" tabindex="0" width="150" src="ZEC_QR.jpeg" alt="Zcash QR, tap to copy address"><div id="copiedToast" hidden aria-live="polite">Address copied</div></div>
     </div>
   </main>
 </div>
@@ -81,12 +84,20 @@
   const LIST_URL = "./videos.json"; // same folder as this file
   const ADDR = "u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x";
 
-  document.getElementById("copyAddr").addEventListener("click", () => {
+  const $copyAddr = document.getElementById("copyAddr");
+  const $toast = document.getElementById("copiedToast");
+  function copyAddress() {
     navigator.clipboard.writeText(ADDR).then(() => {
-      const s = document.getElementById("copyStatus");
-      s.style.display = "inline";
-      setTimeout(() => { s.style.display = "none"; }, 1500);
+      $toast.hidden = false;
+      setTimeout(() => { $toast.hidden = true; }, 1200);
     });
+  }
+  $copyAddr.addEventListener("click", copyAddress);
+  $copyAddr.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      copyAddress();
+    }
   });
 
   // --- state ----------------------------------------------------------------
