@@ -131,19 +131,19 @@ async fn load_cached_tip(username: &str) -> Option<CachedTipEntry> {
 async fn store_cached_tip(username: &str, entry: &CachedTipEntry) {
     let path = cache_path(username);
     if let Some(parent) = path.parent() {
-        if tokio_fs::create_dir_all(parent).await.is_err() {
-            eprintln!("cache: failed to create directory for {}", username);
+        if let Err(err) = tokio_fs::create_dir_all(parent).await {
+            eprintln!("cache: failed to create directory: {}", err);
             return;
         }
     }
     match serde_json::to_vec(entry) {
         Ok(buf) => {
-            if tokio_fs::write(&path, buf).await.is_err() {
-                eprintln!("cache: failed to write entry for {}", username);
+            if let Err(err) = tokio_fs::write(&path, buf).await {
+                eprintln!("cache: failed to write entry: {}", err);
             }
         }
         Err(err) => {
-            eprintln!("cache: failed to serialize {}: {}", username, err);
+            eprintln!("cache: failed to serialize entry: {}", err);
         }
     }
 }
@@ -225,7 +225,7 @@ async fn fetch_tip_info_with_cache(base_url: &Url, username: &str) -> Option<Tip
             None
         }
         Err(err) => {
-            eprintln!("tip: failed to fetch profile for {}: {}", username, err);
+            eprintln!("tip: failed to fetch profile: {}", err);
             None
         }
     }
