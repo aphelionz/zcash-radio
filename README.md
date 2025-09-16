@@ -59,9 +59,11 @@ python3 -m http.server 8080
 
 Visit http://localhost:8080 and click Start Radio.
 
-### Donation address
+### Tips
 
-The footer displays a fixed donation address defined directly in `public/index.html`.
+Each track inherits curator metadata from `videos.json`. When the scanner finds a Zcash Unified Address on the poster's forum profile it caches it for 24 hours and writes it alongside the video entry. The web player swaps the QR code and clipboard target to that per-curator tip while the track plays, falling back to the default address embedded in `public/index.html` when no tip is available.
+
+Cached profile lookups live under `target/profile_cache/` and can be safely deleted if you need to force fresh tip data.
 
 ### Maintainers
 

@@ -22,7 +22,11 @@ fn bench_process_posts(c: &mut Criterion) {
 
     c.bench_function("process_posts", |b| {
         b.iter(|| {
-            let map = process_posts(black_box(&posts), black_box("https://forum"), black_box(&denylist));
+            let map = process_posts(
+                black_box(&posts),
+                black_box("https://forum"),
+                black_box(&denylist),
+            );
             black_box(map);
         })
     });
@@ -63,9 +67,7 @@ fn bench_run_with_mock(c: &mut Criterion) {
             let url = url.clone();
             let out_path = out_path.clone();
             async move {
-                run(black_box(&url), black_box(&out_path))
-                    .await
-                    .unwrap();
+                run(black_box(&url), black_box(&out_path)).await.unwrap();
             }
         });
     });

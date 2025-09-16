@@ -1,12 +1,20 @@
-use anyhow::Result;
-use reqwest::Client;
+use anyhow::{Context, Result};
+use futures::stream::{self, StreamExt};
+use regex::Regex;
+use reqwest::{Client, StatusCode};
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::fs as tokio_fs;
+use tokio::time::sleep;
 use url::Url;
+use zcash_address::unified::{self, Container, Encoding};
+use zcash_protocol::consensus::NetworkType;
 
 static CLIENT: LazyLock<Client> = LazyLock::new(|| {
     Client::builder()
@@ -32,6 +40,15 @@ pub static CURATION_DENYLIST: LazyLock<HashSet<&'static str>> = LazyLock::new(||
         .collect()
 });
 
+static UA_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)u1[0-9a-z]{10,}").expect("invalid UA regex"));
+
+const CACHE_DIR: &str = "./target/profile_cache";
+const CACHE_TTL_SECS: u64 = 24 * 60 * 60;
+const PROFILE_CONCURRENCY: usize = 3;
+const RETRY_ATTEMPTS: usize = 3;
+const RETRY_BASE_DELAY_MS: u64 = 500;
+
 #[derive(Debug, Deserialize)]
 pub struct Topic {
     pub post_stream: PostStream,
@@ -56,6 +73,243 @@ pub struct VideoEntry {
     pub source_post_url: String,
     #[serde(default)]
     pub username: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tip_unified_address: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tip_has_transparent: Option<bool>,
+}
+
+#[derive(Debug, Clone)]
+struct TipInfo {
+    address: String,
+    has_transparent: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct CachedTipEntry {
+    cached_at: u64,
+    #[serde(default)]
+    tip_unified_address: Option<String>,
+    #[serde(default)]
+    tip_has_transparent: bool,
+}
+
+fn cache_path(username: &str) -> PathBuf {
+    let mut sanitized = String::with_capacity(username.len());
+    for ch in username.chars() {
+        if ch.is_ascii_alphanumeric() {
+            sanitized.push(ch);
+        } else {
+            sanitized.push('_');
+        }
+    }
+    Path::new(CACHE_DIR).join(format!("{}.json", sanitized))
+}
+
+fn now_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
+}
+
+fn cache_entry_fresh(entry: &CachedTipEntry) -> bool {
+    now_timestamp().saturating_sub(entry.cached_at) <= CACHE_TTL_SECS
+}
+
+async fn load_cached_tip(username: &str) -> Option<CachedTipEntry> {
+    let path = cache_path(username);
+    let data = tokio_fs::read(path).await.ok()?;
+    let entry: CachedTipEntry = serde_json::from_slice(&data).ok()?;
+    if cache_entry_fresh(&entry) {
+        Some(entry)
+    } else {
+        None
+    }
+}
+
+async fn store_cached_tip(username: &str, entry: &CachedTipEntry) {
+    let path = cache_path(username);
+    if let Some(parent) = path.parent() {
+        if tokio_fs::create_dir_all(parent).await.is_err() {
+            eprintln!("cache: failed to create directory for {}", username);
+            return;
+        }
+    }
+    match serde_json::to_vec(entry) {
+        Ok(buf) => {
+            if tokio_fs::write(&path, buf).await.is_err() {
+                eprintln!("cache: failed to write entry for {}", username);
+            }
+        }
+        Err(err) => {
+            eprintln!("cache: failed to serialize {}: {}", username, err);
+        }
+    }
+}
+
+fn extract_unified_address(text: &str) -> Option<String> {
+    UA_REGEX.find(text).map(|m| m.as_str().to_lowercase())
+}
+
+fn validate_unified_address(candidate: &str) -> Option<TipInfo> {
+    match unified::Address::decode(candidate) {
+        Ok((network, address)) => {
+            if network != NetworkType::Main {
+                eprintln!(
+                    "tip: rejected UA on non-mainnet network ({:?}): {}",
+                    network, candidate
+                );
+                return None;
+            }
+            let has_transparent = address.items().iter().any(|receiver| {
+                matches!(
+                    receiver,
+                    unified::Receiver::P2pkh(_) | unified::Receiver::P2sh(_)
+                )
+            });
+            if has_transparent {
+                eprintln!("tip: rejected UA with transparent receiver: {}", candidate);
+                None
+            } else {
+                Some(TipInfo {
+                    address: candidate.to_string(),
+                    has_transparent,
+                })
+            }
+        }
+        Err(err) => {
+            eprintln!("tip: invalid UA {}: {}", candidate, err);
+            None
+        }
+    }
+}
+
+fn find_address_in_json(value: &serde_json::Value) -> Option<String> {
+    match value {
+        serde_json::Value::String(s) => extract_unified_address(s),
+        serde_json::Value::Array(values) => values.iter().find_map(find_address_in_json),
+        serde_json::Value::Object(map) => map.values().find_map(find_address_in_json),
+        _ => None,
+    }
+}
+
+async fn fetch_tip_info_with_cache(base_url: &Url, username: &str) -> Option<TipInfo> {
+    if username.is_empty() {
+        return None;
+    }
+    if let Some(entry) = load_cached_tip(username).await {
+        return entry.tip_unified_address.map(|addr| TipInfo {
+            address: addr,
+            has_transparent: entry.tip_has_transparent,
+        });
+    }
+
+    match fetch_tip_info_remote(base_url, username).await {
+        Ok(Some(tip)) => {
+            let entry = CachedTipEntry {
+                cached_at: now_timestamp(),
+                tip_unified_address: Some(tip.address.clone()),
+                tip_has_transparent: tip.has_transparent,
+            };
+            store_cached_tip(username, &entry).await;
+            Some(tip)
+        }
+        Ok(None) => {
+            let entry = CachedTipEntry {
+                cached_at: now_timestamp(),
+                tip_unified_address: None,
+                tip_has_transparent: false,
+            };
+            store_cached_tip(username, &entry).await;
+            None
+        }
+        Err(err) => {
+            eprintln!("tip: failed to fetch profile for {}: {}", username, err);
+            None
+        }
+    }
+}
+
+async fn fetch_tip_info_remote(base_url: &Url, username: &str) -> Result<Option<TipInfo>> {
+    if let Some(info) = fetch_tip_from_json(base_url, username).await? {
+        return Ok(Some(info));
+    }
+    fetch_tip_from_html(base_url, username).await
+}
+
+async fn fetch_tip_from_json(base_url: &Url, username: &str) -> Result<Option<TipInfo>> {
+    let url = base_url
+        .join(&format!("/u/{}.json", username))
+        .context("building profile JSON url")?;
+    let resp = get_with_retries(&url).await?;
+    if resp.status() == StatusCode::NOT_FOUND {
+        return Ok(None);
+    }
+    if !resp.status().is_success() {
+        anyhow::bail!("profile json request returned status {}", resp.status());
+    }
+    let value: serde_json::Value = resp.json().await?;
+    if let Some(candidate) = find_address_in_json(&value) {
+        if let Some(tip) = validate_unified_address(&candidate) {
+            return Ok(Some(tip));
+        }
+    }
+    Ok(None)
+}
+
+async fn fetch_tip_from_html(base_url: &Url, username: &str) -> Result<Option<TipInfo>> {
+    let url = base_url
+        .join(&format!("/u/{}", username))
+        .context("building profile HTML url")?;
+    let resp = get_with_retries(&url).await?;
+    if resp.status() == StatusCode::NOT_FOUND {
+        return Ok(None);
+    }
+    if !resp.status().is_success() {
+        anyhow::bail!("profile html request returned status {}", resp.status());
+    }
+    let body = resp.text().await?;
+    if let Some(candidate) = extract_unified_address(&body) {
+        if let Some(tip) = validate_unified_address(&candidate) {
+            return Ok(Some(tip));
+        }
+    }
+    Ok(None)
+}
+
+async fn get_with_retries(url: &Url) -> Result<reqwest::Response> {
+    let mut attempt = 0usize;
+    loop {
+        match CLIENT.get(url.clone()).send().await {
+            Ok(resp) => {
+                if should_retry_status(resp.status()) && attempt + 1 < RETRY_ATTEMPTS {
+                    let delay = retry_delay(attempt);
+                    sleep(delay).await;
+                    attempt += 1;
+                    continue;
+                }
+                return Ok(resp);
+            }
+            Err(err) => {
+                if attempt + 1 >= RETRY_ATTEMPTS {
+                    return Err(err.into());
+                }
+                let delay = retry_delay(attempt);
+                sleep(delay).await;
+                attempt += 1;
+            }
+        }
+    }
+}
+
+fn should_retry_status(status: StatusCode) -> bool {
+    status.is_server_error() || status == StatusCode::TOO_MANY_REQUESTS
+}
+
+fn retry_delay(attempt: usize) -> Duration {
+    let base = Duration::from_millis(RETRY_BASE_DELAY_MS);
+    base * (1u32 << attempt.min(5))
 }
 
 pub fn is_valid_youtube_id(id: &str) -> bool {
@@ -140,6 +394,8 @@ pub fn process_posts(
                                 video_id: video_id_clone,
                                 source_post_url: format!("{}/{}", topic_url, p.post_number),
                                 username: p.username.clone(),
+                                tip_unified_address: None,
+                                tip_has_transparent: None,
                             });
                         }
                         Entry::Occupied(_) => {}
@@ -153,6 +409,7 @@ pub fn process_posts(
 
 pub async fn run(topic_url: &str, out_path: &str) -> Result<usize> {
     let topic_url = topic_url.trim_end_matches('/');
+    let thread_url = Url::parse(topic_url).context("invalid topic url")?;
     let url = format!("{}.json?print=true", topic_url);
     let resp = CLIENT.get(&url).send().await?;
     if !resp.status().is_success() {
@@ -163,7 +420,46 @@ pub async fn run(topic_url: &str, out_path: &str) -> Result<usize> {
     }
     let topic: Topic = resp.json().await?;
     let posts = topic.post_stream.posts;
-    let map = process_posts(&posts, topic_url, &CURATION_DENYLIST);
+    let mut map = process_posts(&posts, topic_url, &CURATION_DENYLIST);
+
+    let usernames: HashSet<String> = map
+        .values()
+        .filter_map(|entry| {
+            let username = entry.username.trim();
+            if username.is_empty() {
+                None
+            } else {
+                Some(username.to_string())
+            }
+        })
+        .collect();
+
+    if !usernames.is_empty() {
+        let profiles = stream::iter(usernames.into_iter().map(|username| {
+            let base = thread_url.clone();
+            async move {
+                let info = fetch_tip_info_with_cache(&base, &username).await;
+                (username, info)
+            }
+        }))
+        .buffer_unordered(PROFILE_CONCURRENCY)
+        .collect::<Vec<_>>()
+        .await;
+
+        let tip_map: HashMap<String, TipInfo> = profiles
+            .into_iter()
+            .filter_map(|(username, info)| info.map(|tip| (username, tip)))
+            .collect();
+
+        for entry in map.values_mut() {
+            let username_key = entry.username.trim();
+            if let Some(tip) = tip_map.get(username_key) {
+                entry.tip_unified_address = Some(tip.address.clone());
+                entry.tip_has_transparent = Some(tip.has_transparent);
+            }
+        }
+    }
+
     let len = map.len();
     let json = serde_json::to_string_pretty(&map)?;
     fs::write(out_path, json)?;
