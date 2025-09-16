@@ -25,7 +25,7 @@
   #stats dd{ justify-self:end; margin:0; }
   #qrWrap{ position:relative; }
   #copyAddr{ cursor:pointer; }
-  #copiedToast{ position:absolute; left:50%; bottom:0; transform:translate(-50%,110%); background:rgba(0,0,0,.75); color:#fff; padding:.25rem .5rem; border-radius:.25rem; font-size:.75rem; }
+  #copiedToast{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,.85); color:#fff; padding:.35rem .75rem; border-radius:.35rem; font-size:.8rem; pointer-events:none; white-space:nowrap; }
   footer{ padding: .5rem .75rem var(--seam-gap); font-size:.9rem; color:#9fb0c6; display: flex; align-items: flex-end; background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0)); white-space:nowrap; }
   footer a, footer button{white-space:nowrap;}
   #source-link{text-align:left;flex:0 0 auto;}
@@ -73,7 +73,7 @@
         <dt>USD/ZEC:</dt> <dd id="USDZEC"></dd>
         <dt>BTC/ZEC:</dt> <dd id="BTCZEC"></dd>
       </dl>
-      <div id="qrWrap"><img id="copyAddr" role="button" tabindex="0" width="150" src="ZEC_QR.jpeg" alt="Zcash address QR code, activate to copy address"><div id="copiedToast" hidden aria-live="polite">Address copied</div></div>
+      <div id="qrWrap"><img id="copyAddr" role="button" tabindex="0" width="150" src="ZEC_QR.jpeg" alt="Zcash tip QR code, activate to copy address" aria-label="Copy Zcash tip address" title="Copy Zcash tip address" referrerpolicy="no-referrer"><div id="copiedToast" hidden aria-live="polite">copied to clipboard</div></div>
     </div>
   </main>
 </div>
@@ -82,16 +82,105 @@
 <script>
   // --- constants / config ---------------------------------------------------
   const LIST_URL = "./videos.json"; // same folder as this file
-  const ADDR = "u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x";
+  const DEFAULT_ADDR = "u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x";
+  const DEFAULT_QR_SRC = "ZEC_QR.jpeg";
+  const TIP_URI_PREFIX = "zcash:";
+  const QR_SERVICE_BASE = "https://api.qrserver.com/v1/create-qr-code/?format=svg&size=150x150&data=";
+  const DEFAULT_QR_ALT = "Zcash tip QR code, activate to copy address";
 
   const $copyAddr = document.getElementById("copyAddr");
   const $toast = document.getElementById("copiedToast");
-  function copyAddress() {
-    navigator.clipboard.writeText(ADDR).then(() => {
-      $toast.hidden = false;
-      setTimeout(() => { $toast.hidden = true; }, 1200);
-    });
+  let toastTimer = null;
+  let activeAddress = DEFAULT_ADDR;
+  let lastQrSrc = DEFAULT_QR_SRC;
+
+  function showToast(message = "copied to clipboard") {
+    if (toastTimer) {
+      clearTimeout(toastTimer);
+      toastTimer = null;
+    }
+    if (message) $toast.textContent = message;
+    $toast.hidden = false;
+    toastTimer = setTimeout(() => {
+      $toast.hidden = true;
+      toastTimer = null;
+    }, 1200);
   }
+
+  async function copyAddress() {
+    if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+      console.error("Clipboard API is not available in this browser");
+      showToast("copy failed");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(activeAddress);
+      showToast();
+    } catch (err) {
+      console.error("Failed to copy address", err);
+      showToast("copy failed");
+    }
+  }
+
+  const addressFromMeta = info => {
+    if (!info || typeof info !== "object") return null;
+    return info.tip_zcash_uri || info.tip_uri || info.tip_unified_address || info.tip_address || info.tip_zaddr || info.tip_z_address || null;
+  };
+
+  const normalizeTipValue = raw => {
+    if (typeof raw !== "string") return null;
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    const colonIdx = trimmed.indexOf(":");
+    if (colonIdx > 0 && colonIdx <= 10) {
+      const scheme = trimmed.slice(0, colonIdx).toLowerCase();
+      if (scheme !== "zcash" && scheme !== "zaddr") return null;
+      let rest = trimmed.slice(colonIdx + 1);
+      if (rest.startsWith("//")) rest = rest.slice(2);
+      const queryIdx = rest.search(/[?#]/);
+      const addrPart = queryIdx >= 0 ? rest.slice(0, queryIdx) : rest;
+      const suffix = queryIdx >= 0 ? rest.slice(queryIdx) : "";
+      const cleaned = (addrPart || "").trim();
+      if (!cleaned) return null;
+      const uri = `${scheme}:${cleaned}${suffix}`;
+      return {
+        address: cleaned,
+        uri
+      };
+    }
+    return {
+      address: trimmed,
+      uri: `${TIP_URI_PREFIX}${trimmed}`
+    };
+  };
+
+  function updateTip(info) {
+    const tip = normalizeTipValue(addressFromMeta(info));
+    const nextAddress = tip ? tip.address : DEFAULT_ADDR;
+    const nextUri = tip ? tip.uri : `${TIP_URI_PREFIX}${DEFAULT_ADDR}`;
+
+    activeAddress = nextAddress;
+    if (tip) {
+      const qrSrc = `${QR_SERVICE_BASE}${encodeURIComponent(nextUri)}`;
+      if (lastQrSrc !== qrSrc) {
+        $copyAddr.src = qrSrc;
+        lastQrSrc = qrSrc;
+      }
+      const labelName = info && info.username ? `@${info.username}` : "this curator";
+      $copyAddr.alt = `Send a Zcash tip to ${labelName}. Activate to copy address.`;
+      $copyAddr.setAttribute("aria-label", `Copy Zcash tip address for ${labelName}`);
+      $copyAddr.title = `Copy ${labelName}'s Zcash tip address`;
+    } else {
+      if (lastQrSrc !== DEFAULT_QR_SRC) {
+        $copyAddr.src = DEFAULT_QR_SRC;
+        lastQrSrc = DEFAULT_QR_SRC;
+      }
+      $copyAddr.alt = DEFAULT_QR_ALT;
+      $copyAddr.setAttribute("aria-label", "Copy Zcash tip address");
+      $copyAddr.title = "Copy Zcash tip address";
+    }
+  }
+
   $copyAddr.addEventListener("click", copyAddress);
   $copyAddr.addEventListener("keydown", e => {
     if (e.key === "Enter" || e.key === " ") {
@@ -147,6 +236,7 @@
     if (!id) return;
     location.hash = id;
     const info = meta[id];
+    updateTip(info);
     if (info && info.source_post_url) {
       $src.href = info.source_post_url;
       $src.textContent = info.username ? `Posted by @${info.username}` : "Posted by source";
@@ -239,4 +329,3 @@
 </script>
 </body>
 </html>
-
