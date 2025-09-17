@@ -45,7 +45,7 @@ static UA_REGEX: LazyLock<Regex> =
 
 const CACHE_DIR: &str = "./target/profile_cache";
 const CACHE_TTL_SECS: u64 = 24 * 60 * 60;
-const PROFILE_CONCURRENCY: usize = 3;
+const PROFILE_CONCURRENCY: usize = 2;
 const RETRY_ATTEMPTS: usize = 3;
 const RETRY_BASE_DELAY_MS: u64 = 500;
 
