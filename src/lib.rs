@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use futures::stream::{self, StreamExt};
 use regex::Regex;
 use reqwest::{Client, StatusCode};
 use scraper::{Html, Selector};
@@ -45,7 +44,7 @@ static UA_REGEX: LazyLock<Regex> =
 
 const CACHE_DIR: &str = "./target/profile_cache";
 const CACHE_TTL_SECS: u64 = 24 * 60 * 60;
-const PROFILE_CONCURRENCY: usize = 2;
+const PROFILE_REQUEST_DELAY_MS: u64 = 1_500;
 const RETRY_ATTEMPTS: usize = 3;
 const RETRY_BASE_DELAY_MS: u64 = 500;
 
@@ -194,15 +193,16 @@ fn find_address_in_json(value: &serde_json::Value) -> Option<String> {
     }
 }
 
-async fn fetch_tip_info_with_cache(base_url: &Url, username: &str) -> Option<TipInfo> {
+async fn fetch_tip_info_with_cache(base_url: &Url, username: &str) -> (Option<TipInfo>, bool) {
     if username.is_empty() {
-        return None;
+        return (None, false);
     }
     if let Some(entry) = load_cached_tip(username).await {
-        return entry.tip_unified_address.map(|addr| TipInfo {
+        let tip = entry.tip_unified_address.map(|addr| TipInfo {
             address: addr,
             has_transparent: entry.tip_has_transparent,
         });
+        return (tip, false);
     }
 
     match fetch_tip_info_remote(base_url, username).await {
@@ -213,7 +213,7 @@ async fn fetch_tip_info_with_cache(base_url: &Url, username: &str) -> Option<Tip
                 tip_has_transparent: tip.has_transparent,
             };
             store_cached_tip(username, &entry).await;
-            Some(tip)
+            (Some(tip), true)
         }
         Ok(None) => {
             let entry = CachedTipEntry {
@@ -222,11 +222,11 @@ async fn fetch_tip_info_with_cache(base_url: &Url, username: &str) -> Option<Tip
                 tip_has_transparent: false,
             };
             store_cached_tip(username, &entry).await;
-            None
+            (None, true)
         }
         Err(err) => {
             eprintln!("tip: failed to fetch profile: {}", err);
-            None
+            (None, true)
         }
     }
 }
@@ -435,21 +435,20 @@ pub async fn run(topic_url: &str, out_path: &str) -> Result<usize> {
         .collect();
 
     if !usernames.is_empty() {
-        let profiles = stream::iter(usernames.into_iter().map(|username| {
-            let base = thread_url.clone();
-            async move {
-                let info = fetch_tip_info_with_cache(&base, &username).await;
-                (username, info)
-            }
-        }))
-        .buffer_unordered(PROFILE_CONCURRENCY)
-        .collect::<Vec<_>>()
-        .await;
+        let mut usernames_vec: Vec<String> = usernames.into_iter().collect();
+        usernames_vec.sort();
 
-        let tip_map: HashMap<String, TipInfo> = profiles
-            .into_iter()
-            .filter_map(|(username, info)| info.map(|tip| (username, tip)))
-            .collect();
+        let mut tip_map: HashMap<String, TipInfo> = HashMap::new();
+        for (idx, username) in usernames_vec.iter().enumerate() {
+            let (tip, fetched_remote) =
+                fetch_tip_info_with_cache(&thread_url, username.as_str()).await;
+            if let Some(tip) = tip {
+                tip_map.insert(username.clone(), tip);
+            }
+            if fetched_remote && idx + 1 < usernames_vec.len() {
+                sleep(Duration::from_millis(PROFILE_REQUEST_DELAY_MS)).await;
+            }
+        }
 
         for entry in map.values_mut() {
             let username_key = entry.username.trim();
