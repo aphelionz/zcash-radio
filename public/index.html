@@ -69,9 +69,10 @@
     <div class="separator" aria-hidden="true"></div>
     <div id="boxes">
       <dl id="stats">
-        <dt>Block height:</dt> <dd id="blockHeight"></dd>
+        <dt>CMC Rank:</dt> <dd id="ZECRank"></dd>
+        <dt>Height:</dt> <dd id="blockHeight"></dd>
         <dt>USD/ZEC:</dt> <dd id="USDZEC"></dd>
-        <dt>BTC/ZEC:</dt> <dd id="BTCZEC"></dd>
+        <dt>mBTC/ZEC:</dt> <dd id="BTCZEC"></dd>
       </dl>
       <div id="qrWrap"><img id="copyAddr" role="button" tabindex="0" width="150" src="ZEC_QR.jpeg" alt="Zcash tip QR code, activate to copy address" aria-label="Copy Zcash tip address" title="Copy Zcash tip address" referrerpolicy="no-referrer"><div id="copiedToast" hidden aria-live="polite">copied to clipboard</div></div>
     </div>
@@ -209,8 +210,8 @@
   const next = () => { if(!order.length) return; i = (i+1)%order.length; play(); };
   const prev = () => { if(!order.length) return; i = (i-1+order.length)%order.length; play(); };
 
-  const nfUSD = new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', maximumFractionDigits: 2 });
-  const nfBTC = new Intl.NumberFormat('en-US', { maximumSignificantDigits: 6 });
+  const nfUSD = new Intl.NumberFormat("en-US", { style:"currency", currency:"USD", maximumFractionDigits: 2 });
+  const nfMilliBTC = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   async function loadIds() {
     const r = await fetch(LIST_URL, { cache: "no-store" });
@@ -266,21 +267,26 @@
 
   async function getZecStats() {
     try {
-      const res = await fetch('https://api.blockchair.com/zcash/stats');
+      const res = await fetch('./data/zec-stats.json', { cache: 'no-store' });
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const json = await res.json();
-      // Height lives here on current API; keep a fallback for safety:
       return {
-        height: json?.data?.best_block_height ?? json?.data?.blocks ?? null,
-        usd_zec: json?.data?.market_price_usd ?? null,
-        btc_zec: json?.data?.market_price_btc ?? null
+        height: json?.height ?? null,
+        usd_zec: json?.usd_zec ?? null,
+        btc_zec: json?.btc_zec ?? null,
+        rank: json?.rank ?? null,
+        market_cap_usd: json?.market_cap_usd ?? null,
+        mbtc_usd: json?.mbtc_usd ?? null
       }
     } catch (e) {
       console.error("Failed to fetch ZEC stats:", e);
       return {
         height: null,
         usd_zec: null,
-        btc_zec: null
+        btc_zec: null,
+        rank: null,
+        market_cap_usd: null,
+        mbtc_usd: null
       };
     }
   }
@@ -288,11 +294,26 @@
   async function updateStats() {
     try {
       const stats = await getZecStats();
+      const rankElement = document.getElementById("ZECRank");
+      const rankValue = stats.rank !== null ? Number(stats.rank) : null;
+      rankElement.textContent = Number.isFinite(rankValue) ? `#${Math.round(rankValue)}` : "N/A";
+
       document.getElementById("blockHeight").textContent = stats.height !== null ? stats.height : "N/A";
-      document.getElementById("USDZEC").textContent = stats.usd_zec !== null ? nfUSD.format(stats.usd_zec) : "N/A";
-      document.getElementById("BTCZEC").textContent = stats.btc_zec !== null ? nfBTC.format(stats.btc_zec) : "N/A";
+      const usdElement = document.getElementById("USDZEC");
+      const usdPrice = stats.usd_zec !== null ? Number(stats.usd_zec) : null;
+      usdElement.textContent = Number.isFinite(usdPrice) ? nfUSD.format(usdPrice) : "N/A";
+
+      const btcElement = document.getElementById("BTCZEC");
+      const btcPrice = stats.btc_zec !== null ? Number(stats.btc_zec) : null;
+      if (Number.isFinite(btcPrice)) {
+        const mBtcValue = btcPrice * 1000;
+        btcElement.textContent = nfMilliBTC.format(mBtcValue);
+      } else {
+        btcElement.textContent = "N/A";
+      }
     } catch (e) {
       console.error("Failed to update stats:", e);
+      document.getElementById("ZECRank").textContent = "N/A";
       document.getElementById("blockHeight").textContent = "N/A";
       document.getElementById("USDZEC").textContent = "N/A";
       document.getElementById("BTCZEC").textContent = "N/A";
