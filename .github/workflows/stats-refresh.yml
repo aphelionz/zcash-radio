@@ -1,10 +1,8 @@
-name: Zcash Radio — Build & Deploy
+name: Zcash Radio — Stats Refresh
 
 on:
-  push:
-    branches: [ main ]
   schedule:
-    - cron: "0 */6 * * *"   # refresh every 6 hours
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -17,8 +15,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  refresh:
     runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -28,28 +29,22 @@ jobs:
           path: public
           if-no-artifact-found: warn
 
-      # Build + run the Rust scanner to (re)generate public/videos.json
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Generate videos.json
-        run: |
-          cargo run --release # use default arguments
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      # Prepare and upload the static site
+      - name: Refresh ZEC stats
+        run: python scripts/get-zec-stats.py
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: public
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-24.04
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
