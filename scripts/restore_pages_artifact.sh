@@ -108,8 +108,18 @@ temp_dir=$(mktemp -d)
 unzip -qo "$temp_zip" -d "$temp_dir"
 
 if [[ ! -f "$temp_dir/index.html" ]]; then
-  echo "Restored artifact is missing index.html; aborting to avoid clobbering site" >&2
-  exit 1
+  echo "Restored artifact is missing index.html; skipping restore to avoid clobbering site" >&2
+  exit 0
+fi
+
+if [[ ! -f "$temp_dir/videos.json" ]]; then
+  echo "Restored artifact is missing videos.json; skipping restore to keep existing playlist" >&2
+  exit 0
+fi
+
+if [[ ! -f "$temp_dir/data/zec-stats.json" ]]; then
+  echo "Restored artifact is missing data/zec-stats.json; skipping restore to keep existing stats" >&2
+  exit 0
 fi
 
 rsync -a --delete "$temp_dir"/ "$OUTPUT_DIR"/
