@@ -26,45 +26,7 @@ jobs:
       - name: Restore previously deployed site
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          mkdir -p public
-          owner="${GITHUB_REPOSITORY%/*}"
-          repo="${GITHUB_REPOSITORY#*/}"
-          echo "Attempting to restore latest Pages artifact..."
-          latest_response=$(curl -fsSL \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$owner/$repo/pages/artifacts/latest" || true)
-          if [ -z "$latest_response" ]; then
-            echo "No existing Pages artifact found. Continuing with clean public directory."
-            exit 0
-          fi
-          artifact_id=$(printf '%s' "$latest_response" | jq -r '.artifact.id // empty')
-          if [ -z "$artifact_id" ]; then
-            echo "No existing Pages artifact found. Continuing with clean public directory."
-            exit 0
-          fi
-          download_response=$(curl -fsSL \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$owner/$repo/pages/artifacts/$artifact_id" || true)
-          if [ -z "$download_response" ]; then
-            echo "Unable to obtain download URL for Pages artifact $artifact_id; skipping restore."
-            exit 0
-          fi
-          download_url=$(printf '%s' "$download_response" | jq -r '.download_url // empty')
-          if [ -z "$download_url" ]; then
-            echo "Unable to obtain download URL for Pages artifact $artifact_id; skipping restore."
-            exit 0
-          fi
-          temp_zip=$(mktemp)
-          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$download_url" -o "$temp_zip"
-          temp_dir=$(mktemp -d)
-          unzip -qo "$temp_zip" -d "$temp_dir"
-          rsync -a --delete "$temp_dir"/ public/
-          rm -rf "$temp_zip" "$temp_dir"
-          echo "Restored site contents from artifact $artifact_id."
+        run: bash scripts/restore_pages_artifact.sh public
 
       - name: Set up Python
         uses: actions/setup-python@v5
