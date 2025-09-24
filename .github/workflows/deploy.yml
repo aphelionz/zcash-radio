@@ -1,10 +1,10 @@
-name: Zcash Radio — Build & Deploy
+name: Zcash Radio — Refresh & Deploy
 
 on:
   push:
     branches: [ main ]
   schedule:
-    - cron: "0 */6 * * *"   # refresh every 6 hours
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -17,38 +17,58 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  refresh:
     runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Restore previously deployed site
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash scripts/restore_pages_artifact.sh public
-
-      # Build + run the Rust scanner to (re)generate public/videos.json
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Generate videos.json
+      - name: Calculate cache slot
+        id: cache_meta
         run: |
-          cargo run --release # use default arguments
+          SLOT="$(date -u +'%Y-%m-%d')-slot$(( $(date -u +%H) / 6 ))"
+          echo "slot=$SLOT" >> "$GITHUB_OUTPUT"
+          echo "CACHE_KEY=videos-json-$SLOT" >> "$GITHUB_ENV"
 
-      # Prepare and upload the static site
+      - name: Restore cached videos.json
+        id: restore_videos
+        uses: actions/cache@v4
+        with:
+          path: public/videos.json
+          key: ${{ env.CACHE_KEY }}
+          restore-keys: videos-json-
+
+      - name: Set up Rust toolchain
+        if: steps.restore_videos.outputs.cache-hit != 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Prime Rust build cache
+        if: steps.restore_videos.outputs.cache-hit != 'true'
+        uses: Swatinem/rust-cache@v2
+
+      - name: Generate videos.json
+        if: steps.restore_videos.outputs.cache-hit != 'true'
+        run: cargo run --release
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Refresh ZEC stats
+        run: python scripts/get-zec-stats.py
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: public
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-24.04
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: Deploy to GitHub Pages
-        id: deployment
+        id: deploy
         uses: actions/deploy-pages@v4
