@@ -29,7 +29,9 @@ jobs:
       - name: Calculate cache slot
         id: cache_meta
         run: |
-          SLOT="$(date -u +'%Y-%m-%d')-slot$(( $(date -u +%H) / 6 ))"
+          # Divide the day into 4 cache slots (every 6 hours)
+          SLOT_HOURS=6
+          SLOT="$(date -u +'%Y-%m-%d')-slot$(( $(date -u +%H) / SLOT_HOURS ))"
           echo "slot=$SLOT" >> "$GITHUB_OUTPUT"
           echo "CACHE_KEY=videos-json-$SLOT" >> "$GITHUB_ENV"
 
