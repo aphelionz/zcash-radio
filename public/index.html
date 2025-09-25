@@ -86,6 +86,7 @@
   const DEFAULT_ADDR = "u147vgjkzaf83ehp6d9qrrwenyjdl8vqz2vm95003txvalhnwa4dk3puzrfxxrnk8r9yws3hqmfqy8060kdxu7vnltfgd3xtdmkp24tgs4j79vgt0fxm5dnv49qh5xtddhgwvukwj90wjerpw3x5uztevptgvvjtezhkjz9sughqy3qv2x";
   const DEFAULT_QR_SRC = "ZEC_QR.jpeg";
   const TIP_URI_PREFIX = "zcash:";
+  const BLOCKCHAIR_URL = "https://api.blockchair.com/zcash/stats";
   const QR_SERVICE_BASE = "https://api.qrserver.com/v1/create-qr-code/?format=svg&size=150x150&data=";
   const DEFAULT_QR_ALT = "Zcash tip QR code, activate to copy address";
 
@@ -213,6 +214,22 @@
   const nfUSD = new Intl.NumberFormat("en-US", { style:"currency", currency:"USD", maximumFractionDigits: 2 });
   const nfMilliBTC = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  const toNumber = value => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return null;
+  };
+
+  const toInt = value => {
+    const asNumber = toNumber(value);
+    if (asNumber === null) return null;
+    const rounded = Math.round(asNumber);
+    return Number.isFinite(rounded) ? Math.max(rounded, 0) : null;
+  };
+
   async function loadIds() {
     const r = await fetch(LIST_URL, { cache: "no-store" });
     if (!r.ok) throw new Error(`Failed to load ${LIST_URL} (${r.status})`);
@@ -265,58 +282,71 @@
     });
   };
 
-  async function getZecStats() {
+  const fetchLocalStats = async () => {
     try {
       const res = await fetch('./data/zec-stats.json', { cache: 'no-store' });
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const json = await res.json();
       return {
+        rank: json?.rank ?? null,
         height: json?.height ?? null,
         usd_zec: json?.usd_zec ?? null,
-        btc_zec: json?.btc_zec ?? null,
-        rank: json?.rank ?? null,
-        market_cap_usd: json?.market_cap_usd ?? null,
-        mbtc_usd: json?.mbtc_usd ?? null
-      }
-    } catch (e) {
-      console.error("Failed to fetch ZEC stats:", e);
+        btc_zec: json?.btc_zec ?? null
+      };
+    } catch (error) {
+      console.error('Failed to fetch cached ZEC stats:', error);
       return {
+        rank: null,
         height: null,
         usd_zec: null,
-        btc_zec: null,
-        rank: null,
-        market_cap_usd: null,
-        mbtc_usd: null
+        btc_zec: null
       };
     }
-  }
+  };
+
+  const fetchBlockchairStats = async () => {
+    const res = await fetch(BLOCKCHAIR_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Blockchair error: ${res.status}`);
+    const payload = await res.json();
+    const data = payload?.data;
+    if (!data || typeof data !== 'object') {
+      throw new Error('Blockchair payload missing data');
+    }
+
+    return {
+      height: toInt(data.best_block_height ?? data.blocks),
+      usd_zec: toNumber(data.market_price_usd),
+      btc_zec: toNumber(data.market_price_btc)
+    };
+  };
 
   async function updateStats() {
-    try {
-      const stats = await getZecStats();
-      const rankElement = document.getElementById("ZECRank");
-      const rankValue = stats.rank !== null ? Number(stats.rank) : null;
-      rankElement.textContent = Number.isFinite(rankValue) ? `#${Math.round(rankValue)}` : "N/A";
+    const [blockchair, localStats] = await Promise.all([
+      fetchBlockchairStats().catch(error => {
+        console.error('Failed to fetch Blockchair stats:', error);
+        return null;
+      }),
+      fetchLocalStats()
+    ]);
 
-      document.getElementById("blockHeight").textContent = stats.height !== null ? stats.height : "N/A";
-      const usdElement = document.getElementById("USDZEC");
-      const usdPrice = stats.usd_zec !== null ? Number(stats.usd_zec) : null;
-      usdElement.textContent = Number.isFinite(usdPrice) ? nfUSD.format(usdPrice) : "N/A";
+    const rankElement = document.getElementById("ZECRank");
+    const rankValue = toNumber(localStats.rank);
+    rankElement.textContent = rankValue !== null ? `#${Math.round(rankValue)}` : "N/A";
 
-      const btcElement = document.getElementById("BTCZEC");
-      const btcPrice = stats.btc_zec !== null ? Number(stats.btc_zec) : null;
-      if (Number.isFinite(btcPrice)) {
-        const mBtcValue = btcPrice * 1000;
-        btcElement.textContent = nfMilliBTC.format(mBtcValue);
-      } else {
-        btcElement.textContent = "N/A";
-      }
-    } catch (e) {
-      console.error("Failed to update stats:", e);
-      document.getElementById("ZECRank").textContent = "N/A";
-      document.getElementById("blockHeight").textContent = "N/A";
-      document.getElementById("USDZEC").textContent = "N/A";
-      document.getElementById("BTCZEC").textContent = "N/A";
+    const heightValue = blockchair?.height ?? toInt(localStats.height);
+    document.getElementById("blockHeight").textContent = heightValue ?? "N/A";
+
+    const usdElement = document.getElementById("USDZEC");
+    const usdPrice = blockchair?.usd_zec ?? toNumber(localStats.usd_zec);
+    usdElement.textContent = usdPrice !== null ? nfUSD.format(usdPrice) : "N/A";
+
+    const btcElement = document.getElementById("BTCZEC");
+    const btcPrice = blockchair?.btc_zec ?? toNumber(localStats.btc_zec);
+    if (btcPrice !== null) {
+      const mBtcValue = btcPrice * 1000;
+      btcElement.textContent = nfMilliBTC.format(mBtcValue);
+    } else {
+      btcElement.textContent = "N/A";
     }
   }
 
